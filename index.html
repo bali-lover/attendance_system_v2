@@ -1,0 +1,3458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출결 관리 시스템 v2 (미인정지각 관리)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .header-right {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+        }
+        
+        .date-nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        
+        .date-display {
+            font-size: 14px;
+            color: #007bff;
+            margin: 0;
+            min-width: 160px;
+            text-align: center;
+        }
+        
+        .date-nav-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+        
+        .date-nav-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .today-btn {
+            margin-top: 5px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid;
+        }
+        
+        .stat-item.present { border-left-color: #28a745; }
+        .stat-item.absent { border-left-color: #dc3545; }
+        .stat-item.late { border-left-color: #ffc107; }
+        .stat-item.early { border-left-color: #17a2b8; }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 370px;
+            gap: 15px;
+        }
+        
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+        
+        .controls h3 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+        
+        .control-button {
+            padding: 8px 14px;
+            margin: 3px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .export-btn { background-color: #28a745; color: white; }
+        .export-btn:hover { background-color: #218838; }
+        
+        .history-btn { background-color: #007bff; color: white; }
+        .history-btn:hover { background-color: #0056b3; }
+        
+        .reset-btn { background-color: #6c757d; color: white; }
+        .reset-btn:hover { background-color: #5a6268; }
+        
+        .clear-all-btn { background-color: #dc3545; color: white; }
+        .clear-all-btn:hover { background-color: #c82333; }
+
+        .tab-btn {
+            background-color: #6c757d;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tab-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        /* 누적기록 버튼 특별 스타일 */
+        .history-btn {
+            background-color: #17a2b8 !important;
+        }
+        
+        .history-btn:hover {
+            background-color: #138496 !important;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .sms-container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            margin: 15px;
+        }
+
+        .sms-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .sms-header h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        .sms-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .sms-table-container {
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .sms-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .sms-table th {
+            background-color: #f8f9fa;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 2px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        .sms-table th:last-child {
+            border-right: none;
+        }
+
+        .sms-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .sms-table td:last-child {
+            border-right: none;
+        }
+
+        .sms-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .sms-table tr.selected {
+            background-color: #e3f2fd;
+        }
+
+        .sms-table .status-btn {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .sms-table .status-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .sms-table .status-btn.status-late, .sms-table .status-btn.status-unverified {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .sms-table .status-btn.status-late:hover, .sms-table .status-btn.status-unverified:hover {
+            background-color: #f5c6cb;
+        }
+
+        .sms-table .status-btn.status-verified {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .sms-table .status-btn.status-verified:hover {
+            background-color: #bee5eb;
+        }
+
+        .sms-table .status-btn.status-medical {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .sms-table .status-btn.status-medical:hover {
+            background-color: #b3d9ff;
+        }
+
+        .send-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            min-width: 50px;
+        }
+
+        .send-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .status-sent {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-late, .status-unverified {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-verified {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-medical {
+            background-color: #cce5ff;
+            color: #004085;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .template-tab {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .template-tab:hover {
+            background-color: #e9ecef;
+        }
+
+        .template-tab.active {
+            background-color: white;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .template-content {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .template-content.active {
+            display: block;
+        }
+        
+        .calendar-section {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .day-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .calendar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 3px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .calendar-day-header {
+            background-color: #f8f9fa;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .calendar-day {
+            border: 1px solid #dee2e6;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 65px;
+            font-size: 13px;
+        }
+        
+        .calendar-day:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .calendar-day.other-month {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .calendar-day.today {
+            background-color: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+        
+        .calendar-day.selected {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 16px;
+        }
+        
+        .day-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            font-size: 10px;
+            width: 100%;
+        }
+        
+        .stat-badge {
+            display: block;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 9px;
+            text-align: center;
+            margin: 1px 0;
+            max-width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: help;
+        }
+        
+        .stat-badge.absent { background-color: #dc3545; }
+        .stat-badge.late { background-color: #ffc107; color: #212529; }
+        .stat-badge.early { background-color: #17a2b8; }
+        
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+        
+        .student-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .student-card.absent {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        .student-card.late {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+        }
+        
+        .student-card.early-leave {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+        }
+        
+        .student-card.absent .student-number,
+        .student-card.late .student-number,
+        .student-card.early-leave .student-number {
+            color: #333;
+        }
+        
+        .student-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            min-height: 20px;
+        }
+        
+        .student-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #999;
+            transition: color 0.3s ease;
+        }
+        
+        .student-status {
+            font-size: 10px;
+            color: #666;
+            min-width: 30px;
+            text-align: left;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+        }
+        
+        .status-btn {
+            padding: 4px 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-absent {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-absent:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-late {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-late:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-early {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-early:hover {
+            background-color: #138496;
+        }
+        
+        .btn-absent-early {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-absent-early:hover {
+            background-color: #5a6268;
+        }
+        
+        .btn-clear {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background-color: #5a6268;
+        }
+        
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .period-modal {
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .period-modal h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .period-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .period-btn {
+            padding: 15px 10px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .period-btn:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .period-btn.cancel-btn {
+            grid-column: span 4;
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        
+        .period-btn.cancel-btn:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+        
+        /* 범위 선택을 위한 새로운 스타일 */
+        .period-btn.start-selected {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .period-btn.end-selected {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        
+        .period-btn.in-range {
+            background-color: #e9ecef;
+            color: #495057;
+            border-color: #ced4da;
+        }
+        
+        .period-btn.start-selected::after {
+            content: " (시작)";
+            font-size: 12px;
+        }
+        
+        .period-btn.end-selected::after {
+            content: " (끝)";
+            font-size: 12px;
+        }
+
+        .month-btn {
+            padding: 8px 12px;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .month-btn:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .month-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .month-btn:disabled {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            border-color: #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+        }
+        
+        /* 프린트 전용 스타일 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #historyModal, #historyModal * {
+                visibility: visible;
+            }
+            
+            #historyModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: white !important;
+                margin: 0;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            
+            .modal-content {
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            
+            .close, .control-button {
+                display: none !important;
+            }
+            
+            .modal-header {
+                border-bottom: 2px solid #333;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+            }
+            
+            .modal-header h2 {
+                color: #333 !important;
+                font-size: 24px !important;
+            }
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .student-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .header-right {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .student-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 8px;
+            }
+            
+            .calendar-day {
+                min-height: 50px;
+                font-size: 12px;
+            }
+            
+            .day-number {
+                font-size: 14px;
+            }
+            
+            .header-right {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .control-button {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>📋 출결 관리 시스템 v2</h1>
+            <div class="date-nav-container">
+                <button class="date-nav-btn" onclick="changeWorkingDate(-1)">◀</button>
+                <div class="date-display" id="workingDate"></div>
+                <button class="date-nav-btn" onclick="changeWorkingDate(1)">▶</button>
+                <button class="date-nav-btn today-btn" onclick="goToWorkingToday()">오늘로</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="control-button tab-btn" onclick="switchTab('attendance')" id="attendance-tab">📋 출결관리</button>
+            <button class="control-button tab-btn" onclick="switchTab('sms')" id="sms-tab">📱 문자발송</button>
+            <button class="control-button history-btn" onclick="showHistory()">📚 누적 기록</button>
+            <button class="control-button export-btn" onclick="exportAllToCSV()">📊 전체 내보내기</button>
+            <button class="control-button clear-all-btn" onclick="resetAllData()">🗑️ 모두 초기화</button>
+        </div>
+    </div>
+    
+    <!-- 출결관리 탭 -->
+    <div id="attendance-content" class="tab-content active">
+        <div class="main-container">
+            <div class="left-panel">
+                <div class="student-grid" id="studentGrid">
+                    <!-- 학생 카드들이 여기에 생성됩니다 -->
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="calendar-section">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전</button>
+                            <h2 class="calendar-title" id="calendarTitle"></h2>
+                            <button class="nav-btn" onclick="changeMonth(1)">다음 ▶</button>
+                        </div>
+                        <button class="nav-btn" onclick="goToToday()">오늘</button>
+                    </div>
+                </div>
+                
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- 달력이 여기에 생성됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문자발송 탭 -->
+    <div id="sms-content" class="tab-content">
+        <div class="sms-container">
+            <div class="sms-header">
+                <h2>📱 문자발송 관리</h2>
+                <div class="sms-controls">
+                    <button class="control-button reset-btn" onclick="uploadStudentData()">📤 학생명단 관리</button>
+                    <button class="control-button reset-btn" onclick="setWebhookUrl()">⚙️ 솔라피 설정</button>
+                    <button class="control-button reset-btn" onclick="setSMSTemplate()">📝 템플릿 설정</button>
+                </div>
+            </div>
+            
+            <div class="sms-table-container">
+                <table class="sms-table" id="smsTable">
+                    <thead>
+                        <tr>
+                            <th width="60">번호</th>
+                            <th width="80">이름</th>
+                            <th width="120">보호자 전화번호</th>
+                            <th width="100">날짜</th>
+                            <th width="80">상태</th>
+                            <th width="80">종류</th>
+                            <th width="80">시작교시</th>
+                            <th width="80">끝교시</th>
+                            <th width="80">발송</th>
+                            <th width="100">발송완료</th>
+                        </tr>
+                    </thead>
+                    <tbody id="smsTableBody">
+                        <!-- 문자발송 목록이 여기에 생성됩니다 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 누적 기록 모달 -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHistory()">&times;</span>
+            <div class="modal-header">
+                <h2>📚 누적 출결 기록</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="control-button history-btn" onclick="filterByMonth('')" id="btn-all">전체</button>
+                    <button class="control-button history-btn" onclick="showMonthSelector()">월별</button>
+                    <button class="control-button export-btn" onclick="printHistory()">📄 프린트</button>
+                </div>
+            </div>
+            <div id="historyContent">
+                <!-- 누적 기록이 여기에 표시됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 교시 선택 모달 -->
+    <div id="periodModal" class="modal">
+        <div class="modal-content period-modal">
+            <h3 id="periodModalTitle">시작 교시를 선택하세요</h3>
+            <p id="periodModalSubtitle" style="font-size: 14px; color: #666; margin: 5px 0 15px 0;"></p>
+            <div class="period-grid">
+                <button class="period-btn" id="period-0" onclick="selectPeriodRange(0)">조례</button>
+                <button class="period-btn" id="period-1" onclick="selectPeriodRange(1)">1교시</button>
+                <button class="period-btn" id="period-2" onclick="selectPeriodRange(2)">2교시</button>
+                <button class="period-btn" id="period-3" onclick="selectPeriodRange(3)">3교시</button>
+                <button class="period-btn" id="period-4" onclick="selectPeriodRange(4)">4교시</button>
+                <button class="period-btn" id="period-5" onclick="selectPeriodRange(5)">5교시</button>
+                <button class="period-btn" id="period-6" onclick="selectPeriodRange(6)">6교시</button>
+                <button class="period-btn" id="period-7" onclick="selectPeriodRange(7)">7교시</button>
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button class="period-btn cancel-btn" onclick="resetPeriodSelection()" style="background-color: #ffc107; margin-right: 10px;">초기화</button>
+                <button class="period-btn cancel-btn" onclick="closePeriodModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- v2 새 기능: 출석 상태 선택 모달 -->
+    <div id="attendanceModal" class="modal">
+        <div class="modal-content period-modal">
+            <h3 id="attendanceModalTitle">출석 유형을 선택하세요</h3>
+            <div class="period-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <button class="period-btn" onclick="selectAttendanceType('medical')" style="background-color: #17a2b8; color: white;">
+                    🏥 질병
+                </button>
+                <button class="period-btn" onclick="selectAttendanceType('verified')" style="background-color: #28a745; color: white;">
+                    ✓ 인정
+                </button>
+                <button class="period-btn" onclick="selectAttendanceType('unverified')" style="background-color: #dc3545; color: white;">
+                    ✗ 미인정  
+                </button>
+                <button class="period-btn cancel-btn" onclick="closeAttendanceModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SMS 미리보기 모달 -->
+    <div id="smsPreviewModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSMSPreview()">&times;</span>
+            <div class="modal-header">
+                <h2>📱 문자 미리보기</h2>
+            </div>
+            <div style="padding: 20px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="font-weight: bold; margin-bottom: 10px;">받는 사람: <span id="previewRecipient"></span></div>
+                    <div style="font-weight: bold; margin-bottom: 10px;">연락처: <span id="previewPhone"></span></div>
+                    <div style="font-weight: bold; margin-bottom: 10px;">발신자: <span id="previewSender"></span></div>
+                </div>
+                <div style="background: white; border: 2px solid #007bff; border-radius: 8px; padding: 15px; min-height: 150px; font-family: monospace; white-space: pre-line;" id="previewMessage"></div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="control-button" onclick="confirmSendSMS()" style="background-color: #28a745; margin-right: 10px;">✅ 발송하기</button>
+                    <button class="control-button" onclick="closeSMSPreview()" style="background-color: #6c757d;">❌ 취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 월 선택 모달 -->
+    <div id="monthSelectorModal" class="modal">
+        <div class="modal-content period-modal">
+            <h3>월을 선택하세요</h3>
+            <div class="period-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <button class="month-btn" onclick="selectMonth('01')" id="month-1">1월</button>
+                <button class="month-btn" onclick="selectMonth('02')" id="month-2">2월</button>
+                <button class="month-btn" onclick="selectMonth('03')" id="month-3">3월</button>
+                <button class="month-btn" onclick="selectMonth('04')" id="month-4">4월</button>
+                <button class="month-btn" onclick="selectMonth('05')" id="month-5">5월</button>
+                <button class="month-btn" onclick="selectMonth('06')" id="month-6">6월</button>
+                <button class="month-btn" onclick="selectMonth('07')" id="month-7">7월</button>
+                <button class="month-btn" onclick="selectMonth('08')" id="month-8">8월</button>
+                <button class="month-btn" onclick="selectMonth('09')" id="month-9">9월</button>
+                <button class="month-btn" onclick="selectMonth('10')" id="month-10">10월</button>
+                <button class="month-btn" onclick="selectMonth('11')" id="month-11">11월</button>
+                <button class="month-btn" onclick="selectMonth('12')" id="month-12">12월</button>
+                <button class="period-btn cancel-btn" onclick="closeMonthSelector()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생명단 업로드 모달 -->
+    <div id="studentUploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeStudentUploadModal()">&times;</span>
+            <div class="modal-header">
+                <h2>👥 학생명단 관리</h2>
+            </div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <h3>📥 1단계: 양식 다운로드</h3>
+                    <p>먼저 학생명단 양식을 다운로드하세요.</p>
+                    <button class="control-button" onclick="downloadStudentTemplate()" style="background-color: #17a2b8;">📥 학생명단 양식 다운로드</button>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>📝 2단계: 양식 작성</h3>
+                    <p>다운로드한 CSV 파일을 열어서 학생 정보를 입력하세요.</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>번호: 학생 번호 (숫자)</li>
+                        <li>이름: 학생 이름</li>
+                        <li>전화번호: 연락처 (010-0000-0000 형식)</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>📤 3단계: 파일 업로드</h3>
+                    <input type="file" id="studentFileInput" accept=".csv,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="margin-bottom: 10px;">
+                    <br>
+                    <button class="control-button" onclick="processStudentFile()" style="background-color: #28a745;">📤 학생명단 업로드</button>
+                </div>
+                
+                <div id="uploadResult" style="margin-top: 20px; padding: 10px; border-radius: 4px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문자 템플릿 설정 모달 -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTemplateModal()">&times;</span>
+            <div class="modal-header">
+                <h2>📝 문자 템플릿 설정</h2>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <h4>사용 가능한 변수:</h4>
+                <p style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px;">
+                    {{이름}} - 학생 이름<br>
+                    {{날짜}} - 출결 날짜<br>
+                    {{종류}} - 출결 상태 (미인정결석, 인정지각 등)<br>
+                    {{발신자명}} - 발신자 이름<br>
+                    {{시작}} - 시작 교시<br>
+                    {{끝}} - 종료 교시
+                </p>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="senderName" style="display: block; margin-bottom: 5px; font-weight: bold;">발신자명:</label>
+                <input type="text" id="senderName" placeholder="예: 3-2반 담임" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <!-- 템플릿 탭 버튼 -->
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; border-bottom: 1px solid #ddd;">
+                    <button type="button" class="template-tab active" onclick="switchTemplateTab('absent')" id="tab-absent">결석 템플릿</button>
+                    <button type="button" class="template-tab" onclick="switchTemplateTab('late')" id="tab-late">지각 템플릿</button>
+                    <button type="button" class="template-tab" onclick="switchTemplateTab('early')" id="tab-early">조퇴 템플릿</button>
+                    <button type="button" class="template-tab" onclick="switchTemplateTab('absent-early')" id="tab-absent-early">결과 템플릿</button>
+                </div>
+            </div>
+            
+            <!-- 결석 템플릿 -->
+            <div id="template-absent" class="template-content active">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">결석 문자 템플릿:</label>
+                <textarea id="templateAbsent" rows="10" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            
+            <!-- 지각 템플릿 -->
+            <div id="template-late" class="template-content">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">지각 문자 템플릿:</label>
+                <textarea id="templateLate" rows="10" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            
+            <!-- 조퇴 템플릿 -->
+            <div id="template-early" class="template-content">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">조퇴 문자 템플릿:</label>
+                <textarea id="templateEarly" rows="10" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            
+            <!-- 결과 템플릿 -->
+            <div id="template-absent-early" class="template-content">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">결과 문자 템플릿:</label>
+                <textarea id="templateAbsentEarly" rows="10" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button class="control-button reset-btn" onclick="resetTemplate()">기본값 복원</button>
+                <button class="control-button export-btn" onclick="saveTemplate()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let todayAttendance = {};
+        let allRecords = {}; // 날짜별 누적 기록
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        let workingDate = new Date(); // 현재 작업 중인 날짜
+        let pendingStudent = null; // 교시 선택 대기 중인 학생
+        let pendingStatus = null; // 교시 선택 대기 중인 상태
+        let pendingVerificationType = null; // v2: 인정/미인정/병결 대기 중
+        
+        // 작업 날짜 표시
+        function displayWorkingDate() {
+            const dateString = workingDate.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            document.getElementById('workingDate').textContent = dateString;
+        }
+        
+        // 달력 생성
+        function createCalendar() {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const calendarTitle = document.getElementById('calendarTitle');
+            
+            // 월/년 제목 설정
+            const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', 
+                               '7월', '8월', '9월', '10월', '11월', '12월'];
+            calendarTitle.textContent = `${currentDate.getFullYear()}년 ${monthNames[currentDate.getMonth()]}`;
+            
+            // 달력 그리드 초기화
+            calendarGrid.innerHTML = '';
+            
+            // 요일 헤더 추가 (평일만)
+            const dayHeaders = ['월', '화', '수', '목', '금'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+            
+            // 달의 첫째 날과 마지막 날 계산
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            
+            // 해당 월의 모든 날짜를 수집하고 평일만 필터링
+            const weekdays = [];
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const dayOfWeek = date.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
+                
+                // 평일만 포함 (월~금: 1~5)
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    weekdays.push(date);
+                }
+            }
+            
+            // 이전 달의 평일들도 필요하면 추가 (첫 주가 비어있을 경우)
+            const firstWeekday = firstDay.getDay();
+            if (firstWeekday > 1) { // 월요일(1)이 아닌 경우
+                const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+                for (let i = firstWeekday - 1; i >= 1; i--) {
+                    const date = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), prevMonth.getDate() - (firstWeekday - 1 - i));
+                    if (date.getDay() >= 1 && date.getDay() <= 5) {
+                        weekdays.unshift(date);
+                    }
+                }
+            }
+            
+            // 다음 달의 평일들도 필요하면 추가 (마지막 주가 비어있을 경우)
+            const totalDays = weekdays.length;
+            const weeksNeeded = Math.ceil(totalDays / 5);
+            const totalCells = weeksNeeded * 5;
+            
+            if (totalDays < totalCells) {
+                const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+                let day = 1;
+                while (weekdays.length < totalCells) {
+                    const date = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), day);
+                    if (date.getDay() >= 1 && date.getDay() <= 5) {
+                        weekdays.push(date);
+                    }
+                    day++;
+                }
+            }
+            
+            // 평일들만 달력에 표시
+            weekdays.forEach(date => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                // 다른 달인지 확인
+                if (date.getMonth() !== currentDate.getMonth()) {
+                    dayElement.classList.add('other-month');
+                }
+                
+                // 오늘인지 확인
+                const today = new Date();
+                if (date.toDateString() === today.toDateString()) {
+                    dayElement.classList.add('today');
+                }
+                
+                // 선택된 날짜인지 확인
+                if (date.toDateString() === selectedDate.toDateString()) {
+                    dayElement.classList.add('selected');
+                }
+                
+                // 날짜 클릭 이벤트
+                dayElement.onclick = () => selectDate(date);
+                
+                // 날짜 번호
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = date.getDate();
+                dayElement.appendChild(dayNumber);
+                
+                // 해당 날짜의 출결 학생 번호 표시
+                const dateKey = date.toLocaleDateString('ko-KR');
+                if (allRecords[dateKey]) {
+                    const dayStats = document.createElement('div');
+                    dayStats.className = 'day-stats';
+                    
+                    const studentsByStatus = getStudentsByStatus(allRecords[dateKey]);
+                    
+                    // 결석 학생 번호들
+                    if (studentsByStatus.absent.length > 0) {
+                        const badge = document.createElement('span');
+                        badge.className = 'stat-badge absent';
+                        const sortedNumbers = studentsByStatus.absent.sort((a, b) => a - b);
+                        const displayText = getDisplayText(sortedNumbers);
+                        badge.textContent = displayText;
+                        badge.title = `결석: ${sortedNumbers.join(', ')}번`;
+                        dayStats.appendChild(badge);
+                    }
+                    
+                    // 지각 학생 번호들
+                    if (studentsByStatus.late.length > 0) {
+                        const badge = document.createElement('span');
+                        badge.className = 'stat-badge late';
+                        const sortedNumbers = studentsByStatus.late.sort((a, b) => a - b);
+                        const displayText = getDisplayText(sortedNumbers);
+                        badge.textContent = displayText;
+                        badge.title = `지각: ${sortedNumbers.join(', ')}번`;
+                        dayStats.appendChild(badge);
+                    }
+                    
+                    // 조퇴 학생 번호들
+                    if (studentsByStatus['early-leave'].length > 0) {
+                        const badge = document.createElement('span');
+                        badge.className = 'stat-badge early';
+                        const sortedNumbers = studentsByStatus['early-leave'].sort((a, b) => a - b);
+                        const displayText = getDisplayText(sortedNumbers);
+                        badge.textContent = displayText;
+                        badge.title = `조퇴: ${sortedNumbers.join(', ')}번`;
+                        dayStats.appendChild(badge);
+                    }
+                    
+                    dayElement.appendChild(dayStats);
+                }
+                
+                calendarGrid.appendChild(dayElement);
+            });
+        }
+        
+        // 날짜별 통계 계산
+        function getDateStats(dayRecords) {
+            const stats = { absent: 0, late: 0, 'early-leave': 0 };
+            
+            Object.values(dayRecords).forEach(record => {
+                if (stats.hasOwnProperty(record.status)) {
+                    stats[record.status]++;
+                }
+            });
+            
+            return stats;
+        }
+        
+        // 날짜별 학생 번호 분류
+        function getStudentsByStatus(dayRecords) {
+            const studentsByStatus = { 
+                absent: [], 
+                late: [], 
+                'early-leave': [] 
+            };
+            
+            Object.keys(dayRecords).forEach(studentNumber => {
+                const record = dayRecords[studentNumber];
+                if (studentsByStatus.hasOwnProperty(record.status)) {
+                    studentsByStatus[record.status].push(parseInt(studentNumber));
+                }
+            });
+            
+            return studentsByStatus;
+        }
+        
+        // 학생 번호 표시 텍스트 생성 (너무 길면 줄임)
+        function getDisplayText(numbers) {
+            const text = numbers.join(',');
+            
+            // 12글자 이하면 그대로 표시
+            if (text.length <= 12) {
+                return text;
+            }
+            
+            // 너무 길면 앞의 몇 개만 표시하고 +개수 추가
+            let displayText = '';
+            let charCount = 0;
+            let displayCount = 0;
+            
+            for (let i = 0; i < numbers.length; i++) {
+                const numberText = numbers[i].toString();
+                const separator = i > 0 ? ',' : '';
+                
+                if (charCount + separator.length + numberText.length <= 8) {
+                    displayText += separator + numberText;
+                    charCount += separator.length + numberText.length;
+                    displayCount++;
+                } else {
+                    break;
+                }
+            }
+            
+            const remaining = numbers.length - displayCount;
+            if (remaining > 0) {
+                displayText += `+${remaining}`;
+            }
+            
+            return displayText;
+        }
+        
+        // 달 변경
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            createCalendar();
+        }
+        
+        // 작업 날짜 변경 (평일만)
+        function changeWorkingDate(direction) {
+            let newDate = new Date(workingDate);
+            
+            do {
+                newDate.setDate(newDate.getDate() + direction);
+            } while (newDate.getDay() === 0 || newDate.getDay() === 6); // 주말 건너뛰기
+            
+            workingDate = newDate;
+            selectedDate = new Date(workingDate); // 선택된 날짜도 함께 변경
+            
+            // 작업 날짜가 현재 표시 중인 달과 다르면 달력 월 변경
+            if (workingDate.getMonth() !== currentDate.getMonth() || 
+                workingDate.getFullYear() !== currentDate.getFullYear()) {
+                currentDate = new Date(workingDate);
+            }
+            
+            displayWorkingDate();
+            loadWorkingDateData();
+            createCalendar();
+        }
+        
+        // 작업 날짜를 오늘로 변경
+        function goToWorkingToday() {
+            const today = new Date();
+            // 오늘이 주말이면 가장 가까운 평일로
+            if (today.getDay() === 0) { // 일요일
+                today.setDate(today.getDate() + 1); // 월요일로
+            } else if (today.getDay() === 6) { // 토요일
+                today.setDate(today.getDate() + 2); // 월요일로
+            }
+            
+            workingDate = today;
+            selectedDate = new Date(workingDate);
+            currentDate = new Date(workingDate);
+            
+            displayWorkingDate();
+            loadWorkingDateData();
+            createCalendar();
+        }
+        
+        // 오늘로 이동
+        function goToToday() {
+            currentDate = new Date();
+            selectedDate = new Date();
+            createCalendar();
+        }
+        
+        // 날짜 선택
+        function selectDate(date) {
+            selectedDate = new Date(date);
+            
+            // 작업 날짜도 함께 변경 (평일만)
+            if (date.getDay() >= 1 && date.getDay() <= 5) { // 평일인 경우만
+                workingDate = new Date(date);
+                
+                // 화면 업데이트
+                displayWorkingDate();
+                loadWorkingDateData();
+            }
+            
+            createCalendar();
+        }
+        
+        // 학생 카드들 생성
+        function createStudentCards() {
+            const studentGrid = document.getElementById('studentGrid');
+            
+            for (let i = 1; i <= 35; i++) {
+                const card = document.createElement('div');
+                card.className = 'student-card';
+                card.id = `student-${i}`;
+                
+                card.innerHTML = `
+                    <div class="student-header">
+                        <div class="student-status" id="status-${i}" onclick="clearAttendance(${i})" style="cursor: pointer;" title="클릭하여 출결 상태 초기화"></div>
+                        <div class="student-number">${i}번</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="status-btn btn-absent" onclick="showAttendanceModal(${i}, 'absent')">결석</button>
+                        <button class="status-btn btn-late" onclick="showAttendanceModal(${i}, 'late')">지각</button>
+                        <button class="status-btn btn-early" onclick="showAttendanceModal(${i}, 'early-leave')">조퇴</button>
+                        <button class="status-btn btn-absent-early" onclick="showAttendanceModal(${i}, 'absent-early')">결과</button>
+                    </div>
+                `;
+                
+                studentGrid.appendChild(card);
+            }
+        }
+        
+        // 작업 날짜 데이터 로드
+        function loadWorkingDateData() {
+            const workingDateKey = workingDate.toLocaleDateString('ko-KR');
+            
+            // 로컬 스토리지에서 해당 날짜 데이터 불러오기
+            const savedData = localStorage.getItem(`attendance_${workingDateKey}`);
+            let workingData = {};
+            
+            if (savedData) {
+                workingData = JSON.parse(savedData);
+                // allRecords에도 동기화
+                allRecords[workingDateKey] = { ...workingData };
+            } else {
+                // allRecords에서 찾기
+                workingData = allRecords[workingDateKey] || {};
+            }
+            
+            // 모든 학생을 정상 상태로 초기화
+            for (let i = 1; i <= 35; i++) {
+                const card = document.getElementById(`student-${i}`);
+                const statusDiv = document.getElementById(`status-${i}`);
+                
+                if (card && statusDiv) {
+                    card.classList.remove('absent', 'late', 'early-leave');
+                    statusDiv.textContent = '';
+                }
+            }
+            
+            // 해당 날짜의 출결 데이터 복원
+            todayAttendance = { ...workingData };
+            
+            Object.keys(workingData).forEach(studentNumber => {
+                const record = workingData[studentNumber];
+                const card = document.getElementById(`student-${studentNumber}`);
+                const statusDiv = document.getElementById(`status-${studentNumber}`);
+                
+                if (card && statusDiv) {
+                    card.classList.add(record.status);
+                    
+                    // v2 새 기능: 인정 유형에 따른 상태 텍스트 설정
+                    const verificationType = record.verificationType || 'verified';
+                    let displayText;
+                    
+                    // 간결한 유형 표시
+                    if (verificationType === 'medical') {
+                        displayText = '질병';
+                    } else if (verificationType === 'unverified') {
+                        displayText = '미인정';
+                    } else {
+                        displayText = '인정';
+                    }
+                    
+                    // 교시 범위 표시 처리 (결석은 교시 정보 없음)
+                    if (record.status !== 'absent' && (record.period || (record.startPeriod !== undefined && record.endPeriod !== undefined))) {
+                        let periodText = '';
+                        
+                        if (record.startPeriod !== undefined && record.endPeriod !== undefined && record.startPeriod !== null && record.endPeriod !== null) {
+                            // 새로운 범위 방식
+                            const startName = record.startPeriod === 0 ? '조례' : record.startPeriod;
+                            const endName = record.endPeriod === 0 ? '조례' : record.endPeriod;
+                            
+                            if (record.startPeriod === record.endPeriod) {
+                                periodText = ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                            } else {
+                                if (startName !== '조례' && endName !== '조례') {
+                                    periodText = ` (${startName}~${endName}교시)`;
+                                } else {
+                                    periodText = ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                }
+                            }
+                        } else if (typeof record.period === 'object' && record.period.start !== undefined && record.period.end !== undefined) {
+                            // 범위 객체
+                            const startName = record.period.start === 0 ? '조례' : record.period.start;
+                            const endName = record.period.end === 0 ? '조례' : record.period.end;
+                            
+                            if (record.period.start === record.period.end) {
+                                periodText = ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                            } else {
+                                if (startName !== '조례' && endName !== '조례') {
+                                    periodText = ` (${startName}~${endName}교시)`;
+                                } else {
+                                    periodText = ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                }
+                            }
+                        } else if (record.period && (record.status === 'late' || record.status === 'early-leave' || record.status === 'absent-early')) {
+                            // 기존 단일 교시 방식
+                            periodText = ` (${record.period}교시)`;
+                        }
+                        
+                        displayText += periodText;
+                    }
+                    
+                    statusDiv.textContent = displayText;
+                }
+            });
+            
+            updateTodayStats();
+        }
+        
+        // 범위 선택을 위한 변수들
+        let selectedStartPeriod = null;
+        let selectedEndPeriod = null;
+        
+        // 교시 선택 모달 표시
+        function showPeriodModal(studentNumber, status) {
+            pendingStudent = studentNumber;
+            pendingStatus = status;
+            selectedStartPeriod = null;
+            selectedEndPeriod = null;
+            
+            const modal = document.getElementById('periodModal');
+            const title = document.getElementById('periodModalTitle');
+            const subtitle = document.getElementById('periodModalSubtitle');
+            
+            const statusText = {
+                'late': '지각', 
+                'early-leave': '조퇴', 
+                'absent-early': '결과',
+                'absent': '결석'
+            }[status] || status;
+            
+            title.textContent = `${studentNumber}번 학생 ${statusText} - 시작 교시를 선택하세요`;
+            subtitle.textContent = "첫 번째 클릭: 시작 교시, 두 번째 클릭: 끝 교시";
+            
+            // 모든 버튼 초기화
+            resetPeriodButtons();
+            modal.style.display = 'block';
+        }
+        
+        // 교시 범위 선택
+        function selectPeriodRange(period) {
+            if (selectedStartPeriod === null) {
+                // 첫 번째 클릭: 시작 교시 설정
+                selectedStartPeriod = period;
+                updatePeriodButtons();
+                document.getElementById('periodModalTitle').textContent = 
+                    `${pendingStudent}번 학생 - 끝 교시를 선택하세요`;
+                document.getElementById('periodModalSubtitle').textContent = 
+                    `시작: ${getPeriodName(period)} | 끝 교시를 클릭하세요`;
+            } else if (selectedEndPeriod === null) {
+                // 두 번째 클릭: 끝 교시 설정
+                if (period >= selectedStartPeriod) {
+                    selectedEndPeriod = period;
+                    updatePeriodButtons();
+                    
+                    // 선택 완료 - 출결 처리
+                    const verificationType = pendingVerificationType || 'verified';
+                    setAttendanceWithVerification(pendingStudent, pendingStatus, 
+                        {start: selectedStartPeriod, end: selectedEndPeriod}, verificationType);
+                    closePeriodModal();
+                } else {
+                    alert('끝 교시는 시작 교시보다 같거나 늦어야 합니다.');
+                }
+            }
+        }
+        
+        // 교시 번호를 이름으로 변환
+        function getPeriodName(period) {
+            return period === 0 ? '조례' : `${period}교시`;
+        }
+        
+        // 교시 버튼 상태 업데이트
+        function updatePeriodButtons() {
+            resetPeriodButtons();
+            
+            if (selectedStartPeriod !== null) {
+                const startBtn = document.getElementById(`period-${selectedStartPeriod}`);
+                startBtn.classList.add('start-selected');
+                
+                if (selectedEndPeriod !== null) {
+                    const endBtn = document.getElementById(`period-${selectedEndPeriod}`);
+                    endBtn.classList.add('end-selected');
+                    
+                    // 범위 내 버튼들 표시
+                    for (let i = selectedStartPeriod + 1; i < selectedEndPeriod; i++) {
+                        const btn = document.getElementById(`period-${i}`);
+                        if (btn) btn.classList.add('in-range');
+                    }
+                }
+            }
+        }
+        
+        // 교시 버튼 초기화
+        function resetPeriodButtons() {
+            for (let i = 0; i <= 7; i++) {
+                const btn = document.getElementById(`period-${i}`);
+                if (btn) {
+                    btn.classList.remove('start-selected', 'end-selected', 'in-range');
+                }
+            }
+        }
+        
+        // 교시 선택 초기화
+        function resetPeriodSelection() {
+            selectedStartPeriod = null;
+            selectedEndPeriod = null;
+            resetPeriodButtons();
+            
+            const statusText = {
+                'late': '지각', 
+                'early-leave': '조퇴', 
+                'absent-early': '결과',
+                'absent': '결석'
+            }[pendingStatus] || pendingStatus;
+            
+            document.getElementById('periodModalTitle').textContent = 
+                `${pendingStudent}번 학생 ${statusText} - 시작 교시를 선택하세요`;
+            document.getElementById('periodModalSubtitle').textContent = 
+                "첫 번째 클릭: 시작 교시, 두 번째 클릭: 끝 교시";
+        }
+        
+        // 교시 모달 닫기
+        function closePeriodModal() {
+            document.getElementById('periodModal').style.display = 'none';
+            selectedStartPeriod = null;
+            selectedEndPeriod = null;
+            resetPeriodButtons();
+            pendingStudent = null;
+            pendingStatus = null;
+            pendingVerificationType = null;
+        }
+
+        // v2 새 기능: 출석 상태 모달 표시
+        function showAttendanceModal(studentNumber, status) {
+            pendingStudent = studentNumber;
+            pendingStatus = status;
+            
+            const modal = document.getElementById('attendanceModal');
+            const title = document.getElementById('attendanceModalTitle');
+            
+            const statusText = status === 'late' ? '지각' : status === 'early-leave' ? '조퇴' : '결석';
+            title.textContent = `${studentNumber}번 학생 ${statusText} - 유형을 선택하세요`;
+            
+            modal.style.display = 'block';
+        }
+
+        // v2 새 기능: 출석 유형 선택
+        function selectAttendanceType(verificationType) {
+            if (pendingStudent && pendingStatus) {
+                pendingVerificationType = verificationType;
+                
+                // 지각과 조퇴인 경우 교시 선택 모달로 이동
+                if (pendingStatus === 'late' || pendingStatus === 'early-leave') {
+                    closeAttendanceModal();
+                    showPeriodModal(pendingStudent, pendingStatus);
+                } else {
+                    // 결석인 경우 바로 처리
+                    setAttendanceWithVerification(pendingStudent, pendingStatus, null, verificationType);
+                    closeAttendanceModal();
+                }
+            }
+        }
+
+        // v2 새 기능: 출석 모달 닫기
+        function closeAttendanceModal() {
+            document.getElementById('attendanceModal').style.display = 'none';
+            // 교시 선택으로 넘어가는 경우 pendingVerificationType은 유지
+            if (pendingStatus !== 'late' && pendingStatus !== 'early-leave') {
+                pendingStudent = null;
+                pendingStatus = null;
+                pendingVerificationType = null;
+            }
+        }
+        
+        // v2 새 기능: 인정 유형이 포함된 출결 상태 설정
+        function setAttendanceWithVerification(studentNumber, status, periodRange = null, verificationType = 'verified') {
+            const card = document.getElementById(`student-${studentNumber}`);
+            const statusDiv = document.getElementById(`status-${studentNumber}`);
+            const currentTime = new Date();
+            const workingDateKey = workingDate.toLocaleDateString('ko-KR');
+            
+            // 이전 상태 제거
+            card.classList.remove('absent', 'late', 'early-leave', 'absent-early');
+            
+            // 새 상태 설정
+            card.classList.add(status);
+            
+            const statusText = {
+                'absent': '결석',
+                'late': '지각',
+                'early-leave': '조퇴',
+                'absent-early': '결과'
+            };
+            
+            const timeString = currentTime.toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // 교시 범위 처리
+            let periodText = '';
+            let startPeriod = null;
+            let endPeriod = null;
+            
+            // 결석은 교시 정보 없이 처리
+            if (status === 'absent' && periodRange === null) {
+                // 결석은 교시 범위 없음
+                periodText = '';
+                startPeriod = null;
+                endPeriod = null;
+            } else if (periodRange) {
+                if (typeof periodRange === 'object' && periodRange.start !== undefined && periodRange.end !== undefined) {
+                    // 새로운 범위 방식
+                    startPeriod = periodRange.start;
+                    endPeriod = periodRange.end;
+                    
+                    const startName = startPeriod === 0 ? '조례' : startPeriod;
+                    const endName = endPeriod === 0 ? '조례' : endPeriod;
+                    
+                    if (startPeriod === endPeriod) {
+                        periodText = ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                    } else {
+                        // 둘 다 조례가 아닌 경우: "3~4교시"
+                        if (startName !== '조례' && endName !== '조례') {
+                            periodText = ` (${startName}~${endName}교시)`;
+                        } else {
+                            // 조례가 포함된 경우: "조례~3교시" 
+                            periodText = ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                        }
+                    }
+                } else {
+                    // 기존 방식 (단일 교시)
+                    startPeriod = 1;
+                    endPeriod = periodRange;
+                    periodText = ` (${periodRange}교시)`;
+                }
+            }
+            
+            // v2 새 기능: 인정 유형에 따른 텍스트 생성
+            let displayText;
+            
+            // 간결한 유형 표시
+            if (verificationType === 'medical') {
+                displayText = '질병';
+            } else if (verificationType === 'unverified') {
+                displayText = '미인정';
+            } else {
+                displayText = '인정';
+            }
+            
+            displayText += periodText;
+            statusDiv.textContent = displayText;
+            
+            // 작업 날짜 출결 기록에 추가
+            const periodData = periodRange && typeof periodRange === 'object' ? periodRange : periodRange;
+            
+            if (!todayAttendance[studentNumber] || todayAttendance[studentNumber].status !== status || 
+                JSON.stringify(todayAttendance[studentNumber].period) !== JSON.stringify(periodData)) {
+                todayAttendance[studentNumber] = {
+                    status: status,
+                    time: timeString,
+                    timestamp: currentTime.toISOString(),
+                    date: workingDateKey,
+                    period: periodData, // 교시 범위 정보
+                    startPeriod: startPeriod, // 시작 교시
+                    endPeriod: endPeriod, // 끝 교시
+                    verificationType: verificationType // v2 새 기능: 선택된 인정 유형
+                };
+            }
+            
+            // 먼저 allRecords 업데이트
+            allRecords[workingDateKey] = { ...todayAttendance };
+            
+            updateTodayStats();
+            saveWorkingDateData();
+            
+            
+            // 달력 새로고침 (작업 날짜에 배지 표시) - 약간의 지연으로 확실한 업데이트
+            setTimeout(() => {
+                createCalendar();
+            }, 10);
+            
+            const messagePeriodText = periodText || '';
+            showMessage(`${studentNumber}번 학생이 ${statusText[status]}${messagePeriodText}으로 처리되었습니다.`);
+        }
+        
+        // 출결 상태 설정 (결석용 - 교시 없음)
+        function setAttendance(studentNumber, status) {
+            // 결석은 교시 정보 없이 바로 처리
+            setAttendanceWithPeriod(studentNumber, status, null);
+        }
+        
+        // 출결 상태 취소
+        function clearAttendance(studentNumber) {
+            const card = document.getElementById(`student-${studentNumber}`);
+            const statusDiv = document.getElementById(`status-${studentNumber}`);
+            
+            // 상태 제거
+            card.classList.remove('absent', 'late', 'early-leave');
+            statusDiv.textContent = '';
+            
+            // 기록에서 제거
+            delete todayAttendance[studentNumber];
+            
+            // 먼저 allRecords 업데이트
+            const workingDateKey = workingDate.toLocaleDateString('ko-KR');
+            allRecords[workingDateKey] = { ...todayAttendance };
+            
+            updateTodayStats();
+            saveWorkingDateData();
+            
+            
+            // 달력 새로고침 - 약간의 지연으로 확실한 업데이트
+            setTimeout(() => {
+                createCalendar();
+            }, 10);
+            
+            showMessage(`${studentNumber}번 학생의 출결이 취소되었습니다.`);
+        }
+        
+        // 오늘 통계 업데이트 (통계 섹션이 없으므로 빈 함수)
+        function updateTodayStats() {
+            // 통계 표시 섹션이 제거되었으므로 실제 동작은 하지 않음
+            // 함수 호출 오류를 방지하기 위해 빈 함수로 유지
+        }
+        
+        
+        
+
+        // 상태 한글 변환
+        function getStatusKorean(status) {
+            const statusMap = {
+                'absent': '결석',
+                'late': '지각',
+                'early-leave': '조퇴',
+                'absent-early': '결과'
+            };
+            return statusMap[status] || status;
+        }
+        
+        
+        // 메시지 표시 (간단한 콘솔 로그)
+        function showMessage(message) {
+            console.log(message);
+        }
+        
+        // 오늘 초기화
+        function resetToday() {
+            if (confirm('오늘의 출결을 모두 초기화하시겠습니까?')) {
+                todayAttendance = {};
+                
+                // 모든 학생을 출석으로 초기화
+                for (let i = 1; i <= 35; i++) {
+                    const card = document.getElementById(`student-${i}`);
+                    const statusDiv = document.getElementById(`status-${i}`);
+                    
+                    card.classList.remove('absent', 'late', 'early-leave');
+                    card.classList.add('present');
+                    statusDiv.textContent = '출석';
+                }
+                
+                updateTodayStats();
+                saveToLocalStorage();
+                
+                showMessage('오늘 출결이 초기화되었습니다.');
+            }
+        }
+        
+        // 오늘 기록 CSV 내보내기
+        function exportTodayToCSV() {
+            const records = Object.keys(todayAttendance).map(studentNumber => {
+                const record = todayAttendance[studentNumber];
+                return `${record.date},${studentNumber},${getStatusKorean(record.status)},${record.time}`;
+            });
+            
+            if (records.length === 0) {
+                alert('내보낼 기록이 없습니다.');
+                return;
+            }
+            
+            const workingDateString = workingDate.toLocaleDateString('ko-KR', {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            
+            if (confirm(`${workingDateString}의 출결 기록을 CSV 파일로 다운로드하시겠습니까?\n\n총 ${records.length}건의 기록이 있습니다.`)) {
+                const today = new Date().toLocaleDateString('ko-KR');
+                const csvContent = 'data:text/csv;charset=utf-8,' 
+                    + '날짜,학생번호,상태,시간\n'
+                    + records.join('\n');
+                
+                downloadCSV(csvContent, `출결기록_${today}.csv`);
+            }
+        }
+        
+        // 전체 기록 CSV 내보내기
+        function exportAllToCSV() {
+            let allCsvRecords = [];
+            
+            Object.keys(allRecords).forEach(date => {
+                Object.keys(allRecords[date]).forEach(studentNumber => {
+                    const record = allRecords[date][studentNumber];
+                    allCsvRecords.push(`${date},${studentNumber},${getStatusKorean(record.status)},${record.time}`);
+                });
+            });
+            
+            if (allCsvRecords.length === 0) {
+                alert('내보낼 누적 기록이 없습니다.');
+                return;
+            }
+            
+            const totalDays = Object.keys(allRecords).length;
+            
+            if (confirm(`전체 출결 기록을 CSV 파일로 다운로드하시겠습니까?\n\n총 ${totalDays}일간 ${allCsvRecords.length}건의 기록이 있습니다.`)) {
+                const csvContent = 'data:text/csv;charset=utf-8,' 
+                    + '날짜,학생번호,상태,시간\n'
+                    + allCsvRecords.join('\n');
+                
+                const today = new Date().toLocaleDateString('ko-KR');
+                downloadCSV(csvContent, `전체출결기록_${today}.csv`);
+            }
+        }
+        
+        // CSV 다운로드 헬퍼 함수
+        function downloadCSV(csvContent, filename) {
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 누적 기록 보기
+        function showHistory() {
+            const modal = document.getElementById('historyModal');
+            
+            // 전체 기록 표시
+            filterByMonth('');
+            modal.style.display = 'block';
+        }
+
+        // 월 선택 모달 표시
+        function showMonthSelector() {
+            console.log('Opening month selector'); // 디버그용
+            updateMonthButtons();
+            document.getElementById('monthSelectorModal').style.display = 'block';
+        }
+
+        // 월 선택 모달 닫기
+        function closeMonthSelector() {
+            document.getElementById('monthSelectorModal').style.display = 'none';
+        }
+
+        // 월 버튼 상태 업데이트
+        function updateMonthButtons() {
+            const availableMonths = new Set();
+            const currentYear = new Date().getFullYear().toString();
+            
+            // 기존 기록에서 월 추출 (올해만)
+            Object.keys(allRecords).forEach(dateKey => {
+                const dateParts = dateKey.split('.');
+                const year = dateParts[0];
+                const month = dateParts[1].trim().padStart(2, '0'); // trim() 추가하여 공백 제거
+                
+                if (year === currentYear) {
+                    availableMonths.add(month);
+                }
+            });
+            
+            console.log('Available months:', Array.from(availableMonths)); // 디버그용
+            
+            // 모든 월 버튼 상태 설정
+            for (let i = 1; i <= 12; i++) {
+                const monthStr = i.toString().padStart(2, '0');
+                const btn = document.getElementById(`month-${i}`);
+                
+                if (availableMonths.has(monthStr)) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    console.log(`Month ${i} enabled`); // 디버그용
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    console.log(`Month ${i} disabled`); // 디버그용
+                }
+            }
+        }
+
+        // 월 선택
+        function selectMonth(month) {
+            console.log('Month selected:', month); // 디버그용
+            closeMonthSelector();
+            filterByMonth(month);
+        }
+
+        // 월별 필터링
+        function filterByMonth(month) {
+            // 현재 선택된 월 업데이트
+            currentSelectedMonth = month;
+            
+            // 버튼 상태 업데이트
+            const allBtn = document.getElementById('btn-all');
+            
+            if (month === '') {
+                allBtn.style.backgroundColor = '#007bff';
+                allBtn.style.color = 'white';
+            } else {
+                allBtn.style.backgroundColor = '';
+                allBtn.style.color = '';
+            }
+            
+            displayFilteredHistory(month);
+        }
+
+        // 필터링된 기록 표시
+        function displayFilteredHistory(selectedMonth = '') {
+            const content = document.getElementById('historyContent');
+            
+            if (Object.keys(allRecords).length === 0) {
+                content.innerHTML = '<p style="text-align: center; color: #666;">아직 누적 기록이 없습니다.</p>';
+                return;
+            }
+
+            let filteredRecords = { ...allRecords };
+
+            // 월별 필터링
+            if (selectedMonth) {
+                filteredRecords = {};
+                const currentYear = new Date().getFullYear().toString();
+                
+                Object.keys(allRecords).forEach(dateKey => {
+                    const dateParts = dateKey.split('.');
+                    const year = dateParts[0];
+                    const month = dateParts[1].trim().padStart(2, '0'); // trim() 추가
+                    
+                    if (year === currentYear && month === selectedMonth) {
+                        filteredRecords[dateKey] = allRecords[dateKey];
+                    }
+                });
+            }
+
+            if (Object.keys(filteredRecords).length === 0) {
+                const selectedText = selectedMonth ? 
+                    `${parseInt(selectedMonth)}월` : 
+                    '선택한 기간';
+                content.innerHTML = `<p style="text-align: center; color: #666;">${selectedText}에 기록이 없습니다.</p>`;
+                return;
+            }
+
+            let historyHTML = '';
+            
+            // 선택된 월의 총 기록 수 계산
+            const totalRecords = Object.keys(filteredRecords).reduce((total, date) => {
+                return total + Object.keys(filteredRecords[date]).length;
+            }, 0);
+
+            // 월별 요약 정보 추가
+            if (selectedMonth) {
+                const currentYear = new Date().getFullYear();
+                historyHTML += `
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 8px; text-align: center;">
+                        <h3 style="margin: 0; color: #1976d2;">${currentYear}년 ${parseInt(selectedMonth)}월 출결 현황</h3>
+                        <p style="margin: 5px 0 0 0; color: #666;">총 ${Object.keys(filteredRecords).length}일간 ${totalRecords}건의 기록</p>
+                    </div>
+                `;
+            }
+            
+            Object.keys(filteredRecords).sort().reverse().forEach(date => {
+                const dayRecords = filteredRecords[date];
+                const recordCount = Object.keys(dayRecords).length;
+                
+                historyHTML += `
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                        <h4 style="cursor: pointer; color: #007bff; text-decoration: underline;" onclick="goToDate('${date}')" title="클릭하여 ${date}로 이동">${date} (${recordCount}건)</h4>
+                        <div style="display: grid; gap: 8px;">
+                `;
+                
+                Object.keys(dayRecords).forEach(studentNumber => {
+                    const record = dayRecords[studentNumber];
+                    let statusText = getStatusKorean(record.status);
+                    
+                    // v2: 간결한 유형 표시
+                    const verificationType = record.verificationType || 'verified';
+                    if (verificationType === 'medical') {
+                        statusText = '질병';
+                    } else if (verificationType === 'unverified') {
+                        statusText = '미인정';
+                    } else {
+                        statusText = '인정';
+                    }
+                    
+                    if (record.period && (record.status === 'late' || record.status === 'early-leave')) {
+                        statusText += ` (${record.period}교시)`;
+                    }
+                    
+                    historyHTML += `
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background-color: white; border-radius: 4px;">
+                            <span><strong>${studentNumber}번</strong> - ${statusText}</span>
+                            <span>${record.time}</span>
+                        </div>
+                    `;
+                });
+                
+                historyHTML += '</div></div>';
+            });
+            
+            content.innerHTML = historyHTML;
+        }
+        
+        // 누적 기록 모달 닫기
+        function closeHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+        
+        // 현재 선택된 월
+        let currentSelectedMonth = '';
+
+        // 누적 기록 프린트
+        function printHistory() {
+            // 현재 화면에 표시된 내용을 기반으로 프린트
+            const content = document.getElementById('historyContent').innerHTML;
+            
+            if (content.includes('기록이 없습니다')) {
+                alert('프린트할 기록이 없습니다.');
+                return;
+            }
+            
+            // 현재 필터 상태 확인
+            let filterTitle = '';
+            let recordCount = 0;
+            let dayCount = 0;
+            
+            if (currentSelectedMonth === '') {
+                // 전체 기록
+                filterTitle = '전체 누적 출결 기록';
+                dayCount = Object.keys(allRecords).length;
+                recordCount = Object.keys(allRecords).reduce((total, date) => {
+                    return total + Object.keys(allRecords[date]).length;
+                }, 0);
+            } else {
+                // 특정 월 기록
+                const currentYear = new Date().getFullYear();
+                const monthNum = parseInt(currentSelectedMonth);
+                filterTitle = `${currentYear}년 ${monthNum}월 출결 기록`;
+                
+                // 현재 필터링된 기록 계산
+                let filteredRecords = {};
+                const currentYearStr = currentYear.toString();
+                
+                Object.keys(allRecords).forEach(dateKey => {
+                    const dateParts = dateKey.split('.');
+                    const year = dateParts[0];
+                    const month = dateParts[1].trim().padStart(2, '0');
+                    
+                    if (year === currentYearStr && month === currentSelectedMonth) {
+                        filteredRecords[dateKey] = allRecords[dateKey];
+                    }
+                });
+                
+                dayCount = Object.keys(filteredRecords).length;
+                recordCount = Object.keys(filteredRecords).reduce((total, date) => {
+                    return total + Object.keys(filteredRecords[date]).length;
+                }, 0);
+            }
+            
+            if (confirm(`${filterTitle}을 프린트하시겠습니까?\n\n총 ${dayCount}일간 ${recordCount}건의 기록이 있습니다.`)) {
+                // 프린트를 위해 제목 임시 변경
+                const originalTitle = document.querySelector('#historyModal .modal-header h2').textContent;
+                document.querySelector('#historyModal .modal-header h2').textContent = filterTitle;
+                
+                window.print();
+                
+                // 원래 제목으로 복원
+                document.querySelector('#historyModal .modal-header h2').textContent = originalTitle;
+            }
+        }
+        
+        // 특정 날짜로 이동 (누적 기록에서 호출)
+        function goToDate(dateString) {
+            // 한국 날짜 문자열을 Date 객체로 변환
+            const dateParts = dateString.split('.');
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1; // JavaScript 월은 0부터 시작
+            const day = parseInt(dateParts[2]);
+            
+            const targetDate = new Date(year, month, day);
+            
+            // 주말인지 확인하고 평일로 조정
+            if (targetDate.getDay() === 0) { // 일요일
+                targetDate.setDate(targetDate.getDate() + 1); // 월요일로
+            } else if (targetDate.getDay() === 6) { // 토요일
+                targetDate.setDate(targetDate.getDate() + 2); // 월요일로
+            }
+            
+            // 작업 날짜와 선택된 날짜 변경
+            workingDate = new Date(targetDate);
+            selectedDate = new Date(targetDate);
+            currentDate = new Date(targetDate);
+            
+            // 모달 닫기
+            closeHistory();
+            
+            // 화면 업데이트
+            displayWorkingDate();
+            loadWorkingDateData();
+            createCalendar();
+        }
+        
+        // 작업 날짜 데이터 저장
+        function saveWorkingDateData() {
+            const workingDateKey = workingDate.toLocaleDateString('ko-KR');
+            
+            // 작업 날짜 기록 저장
+            localStorage.setItem(`attendance_${workingDateKey}`, JSON.stringify(todayAttendance));
+            
+            // 누적 기록에 추가
+            allRecords[workingDateKey] = { ...todayAttendance };
+            localStorage.setItem('attendance_all', JSON.stringify(allRecords));
+        }
+        
+        // 로컬 스토리지에 저장 (하위 호환용)
+        function saveToLocalStorage() {
+            saveWorkingDateData();
+        }
+        
+        // 로컬 스토리지에서 불러오기
+        function loadFromLocalStorage() {
+            // 누적 기록 불러오기
+            const allData = localStorage.getItem('attendance_all');
+            if (allData) {
+                allRecords = JSON.parse(allData);
+            }
+        }
+        
+        // 작업 날짜 초기화
+        function resetToday() {
+            const workingDateString = workingDate.toLocaleDateString('ko-KR', {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            
+            if (confirm(`${workingDateString}의 출결을 모두 초기화하시겠습니까?`)) {
+                todayAttendance = {};
+                
+                // 모든 학생을 정상으로 초기화
+                for (let i = 1; i <= 35; i++) {
+                    const card = document.getElementById(`student-${i}`);
+                    const statusDiv = document.getElementById(`status-${i}`);
+                    
+                    card.classList.remove('absent', 'late', 'early-leave');
+                    statusDiv.textContent = '';
+                }
+                
+                updateTodayStats();
+                saveWorkingDateData();
+                
+                // 달력이 작업 날짜를 보여주고 있다면 업데이트
+                if (selectedDate.toDateString() === workingDate.toDateString()) {
+                    loadWorkingDateData();
+                }
+                
+                createCalendar();
+                showMessage('출결이 초기화되었습니다.');
+            }
+        }
+        
+        // 모든 데이터 초기화
+        function resetAllData() {
+            if (confirm('⚠️ 경고: 모든 날짜의 출결 기록이 완전히 삭제됩니다.\n\n정말로 모든 데이터를 초기화하시겠습니까?')) {
+                if (confirm('한번 더 확인합니다. 정말로 모든 출결 기록을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                    // 모든 데이터 초기화
+                    todayAttendance = {};
+                    allRecords = {};
+                    
+                    // 로컬 스토리지 모든 출결 데이터 삭제
+                    const keys = Object.keys(localStorage);
+                    keys.forEach(key => {
+                        if (key.startsWith('attendance_')) {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                    
+                    // 현재 화면 초기화
+                    for (let i = 1; i <= 35; i++) {
+                        const card = document.getElementById(`student-${i}`);
+                        const statusDiv = document.getElementById(`status-${i}`);
+                        
+                        card.classList.remove('absent', 'late', 'early-leave');
+                        statusDiv.textContent = '';
+                    }
+                    
+                    updateTodayStats();
+                    createCalendar();
+                    
+                    alert('✅ 모든 출결 기록이 삭제되었습니다.');
+                }
+            }
+        }
+        
+        // 로컬 스토리지에서 오늘 데이터 복원
+        function restoreTodayData() {
+            const today = new Date().toLocaleDateString('ko-KR');
+            const todayData = localStorage.getItem(`attendance_${today}`);
+            
+            if (todayData) {
+                todayAttendance = JSON.parse(todayData);
+                
+                // 화면에 반영
+                Object.keys(todayAttendance).forEach(studentNumber => {
+                    const record = todayAttendance[studentNumber];
+                    const card = document.getElementById(`student-${studentNumber}`);
+                    const statusDiv = document.getElementById(`status-${studentNumber}`);
+                    
+                    if (card && statusDiv) {
+                        card.classList.remove('absent', 'late', 'early-leave');
+                        card.classList.add(record.status);
+                        statusDiv.textContent = `${getStatusKorean(record.status)} (${record.time})`;
+                    }
+                });
+                
+                updateTodayStats();
+            }
+        }
+        
+        // 탭 전환 기능
+        function switchTab(tabName) {
+            // 모든 탭 컨텐츠 숨기기
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 선택된 탭 컨텐츠 보이기
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            // 선택된 탭 버튼 활성화
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // 문자발송 탭으로 전환시 자동으로 전체 대상자 로딩
+            if (tabName === 'sms') {
+                loadAllAbsentStudents();
+            }
+        }
+
+        // 문자발송 관련 함수들
+        let smsData = [];
+        let allSMSRecords = {}; // 날짜별 문자발송 기록 저장
+
+        // 전체 출결 대상자 불러오기 (결석, 지각, 조퇴)
+        function loadAllAbsentStudents() {
+            smsData = [];
+            let idCounter = 0;
+            
+            // 기존 문자발송 기록 불러오기
+            loadSMSRecords();
+            
+            // 모든 날짜의 출결 기록에서 대상자 찾기
+            Object.keys(allRecords).forEach(dateKey => {
+                const dayRecords = allRecords[dateKey];
+                
+                Object.keys(dayRecords).forEach(studentNumber => {
+                    const record = dayRecords[studentNumber];
+                    
+                    // 결석, 지각, 조퇴, 결과 모두 포함
+                    if (['absent', 'late', 'early-leave', 'absent-early'].includes(record.status)) {
+                        const verificationType = record.verificationType || 'verified';
+                        let statusText = '';
+                        let statusEmoji = '';
+                        
+                        // 간결한 유형 표시
+                        if (verificationType === 'medical') {
+                            statusText = '질병';
+                            statusEmoji = '🏥';
+                        } else if (verificationType === 'unverified') {
+                            statusText = '미인정';
+                            statusEmoji = '⚠️';
+                        } else {
+                            statusText = '인정';
+                            statusEmoji = '✅';
+                        }
+                        
+                        // 고유 키 생성 (날짜_학생번호_상태)
+                        const uniqueKey = `${dateKey}_${studentNumber}_${record.status}`;
+                        
+                        // 이미 발송된 기록인지 확인
+                        const sentRecord = allSMSRecords[uniqueKey];
+                        const isSent = sentRecord ? sentRecord.sent : false;
+                        
+                        // 실제 학생 정보 가져오기
+                        const studentInfo = getStudentInfo(studentNumber);
+                        
+                        smsData.push({
+                            id: ++idCounter,
+                            uniqueKey: uniqueKey,
+                            studentNumber: studentNumber,
+                            name: studentInfo.name,
+                            phone: studentInfo.phone,
+                            date: dateKey,
+                            status: statusText,
+                            statusEmoji: statusEmoji,
+                            period: record.period || '',
+                            verificationType: verificationType,
+                            originalStatus: record.status,
+                            lateCount: 1, // 실제로는 누적 횟수 계산 필요
+                            totalCount: 1,
+                            sendStatus: '실행',
+                            sent: isSent,
+                            selected: verificationType === 'unverified' && !isSent // 미인정이면서 발송안된 것만 기본 선택
+                        });
+                    }
+                });
+            });
+            
+            // 날짜순으로 정렬 (최신 날짜가 위로)
+            smsData.sort((a, b) => {
+                const dateA = new Date(a.date.replace(/\./g, '/'));
+                const dateB = new Date(b.date.replace(/\./g, '/'));
+                return dateB - dateA;
+            });
+            
+            updateSMSTable();
+            showMessage(`${smsData.length}명의 출결 대상자를 불러왔습니다.`);
+        }
+
+        // 미인정지각 학생만 불러오기
+        function loadUnverifiedLateStudents() {
+            smsData = [];
+            const today = workingDate.toLocaleDateString('ko-KR');
+            
+            // 현재 작업일의 미인정지각 학생들만 찾기
+            Object.keys(todayAttendance).forEach(studentNumber => {
+                const record = todayAttendance[studentNumber];
+                if (record.status === 'late' && record.verificationType === 'unverified') {
+                    smsData.push({
+                        id: smsData.length + 1,
+                        studentNumber: studentNumber,
+                        name: `학생${studentNumber}`,
+                        phone: '010-0000-0000',
+                        date: today,
+                        status: '미인정지각',
+                        statusEmoji: '⚠️',
+                        period: record.period || '',
+                        verificationType: 'unverified',
+                        originalStatus: 'late',
+                        lateCount: 1,
+                        totalCount: 1,
+                        teacher: '3-2반 담임',
+                        sendStatus: '실행',
+                        sent: false,
+                        selected: true
+                    });
+                }
+            });
+            
+            updateSMSTable();
+            showMessage(`${smsData.length}명의 미인정지각 학생을 불러왔습니다.`);
+        }
+
+        // SMS 테이블 업데이트
+        function updateSMSTable() {
+            const tbody = document.getElementById('smsTableBody');
+            tbody.innerHTML = '';
+            
+            smsData.forEach(student => {
+                const row = document.createElement('tr');
+                if (student.selected) {
+                    row.classList.add('selected');
+                }
+                
+                // 상태에 따른 CSS 클래스 결정
+                let statusClass = 'status-late'; // 기본값
+                if (student.verificationType === 'medical') {
+                    statusClass = 'status-medical';
+                } else if (student.verificationType === 'verified') {
+                    statusClass = 'status-verified';
+                } else if (student.verificationType === 'unverified') {
+                    statusClass = 'status-unverified';
+                }
+                
+                // 기본 상태명 매핑
+                const baseStatusNames = {
+                    'absent': '결석',
+                    'late': '지각',
+                    'early-leave': '조퇴',
+                    'absent-early': '결과'
+                };
+                
+                // 종류명 매핑
+                const typeNames = {
+                    'medical': '질병',
+                    'verified': '인정',
+                    'unverified': '미인정'
+                };
+                
+                const baseStatus = baseStatusNames[student.originalStatus] || student.originalStatus;
+                const typeName = typeNames[student.verificationType] || student.verificationType;
+                
+                // 시작/종료 교시 계산
+                let startPeriod = '';
+                let endPeriod = '';
+                
+                // 새로운 범위 방식의 데이터인지 확인
+                if (student.startPeriod !== undefined && student.endPeriod !== undefined) {
+                    // 새로운 범위 방식
+                    startPeriod = student.startPeriod === 0 ? '0' : student.startPeriod.toString();
+                    endPeriod = student.endPeriod === 0 ? '0' : student.endPeriod.toString();
+                } else if (student.period) {
+                    // 기존 방식 또는 범위 객체
+                    if (typeof student.period === 'object' && student.period.start !== undefined && student.period.end !== undefined) {
+                        // 범위 객체
+                        startPeriod = student.period.start === 0 ? '0' : student.period.start.toString();
+                        endPeriod = student.period.end === 0 ? '0' : student.period.end.toString();
+                    } else {
+                        // 기존 단일 교시 방식 (문자열 안전 처리)
+                        const periodStr = String(student.period);
+                        if (student.originalStatus === 'absent') {
+                            // 결석: 1교시부터 해당 교시까지
+                            startPeriod = '1';
+                            endPeriod = periodStr.replace('교시', '').replace('조례', '0');
+                        } else if (student.originalStatus === 'late') {
+                            // 지각: 해당 교시부터 마지막 교시까지
+                            startPeriod = periodStr.replace('교시', '').replace('조례', '0');
+                            endPeriod = '7'; // 보통 7교시까지
+                        } else if (student.originalStatus === 'early-leave') {
+                            // 조퇴: 해당 교시부터 마지막 교시까지
+                            startPeriod = periodStr.replace('교시', '').replace('조례', '0');
+                            endPeriod = '7';
+                        } else if (student.originalStatus === 'absent-early') {
+                            // 결과: 1교시부터 해당 교시까지
+                            startPeriod = '1';
+                            endPeriod = periodStr.replace('교시', '').replace('조례', '0');
+                        }
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${student.studentNumber}</td>
+                    <td>${student.name}</td>
+                    <td>${student.phone}</td>
+                    <td>${student.date}</td>
+                    <td><span class="${statusClass}">${student.statusEmoji} ${baseStatus}</span></td>
+                    <td>${typeName}</td>
+                    <td>${startPeriod === '0' ? '조회' : startPeriod}</td>
+                    <td>${endPeriod === '0' ? '조회' : endPeriod}</td>
+                    <td>
+                        ${student.sent ? 
+                            '<span class="status-sent">발송완료</span>' : 
+                            `<button class="send-btn" onclick="sendWebhook(${student.id}, '${student.status}', '${student.studentNumber}')">발송</button>`
+                        }
+                    </td>
+                    <td>${student.sent ? '<span class="status-sent">✓</span>' : ''}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // 학생 선택/해제
+        function toggleStudentSelection(studentId) {
+            const student = smsData.find(s => s.id === studentId);
+            if (student) {
+                student.selected = !student.selected;
+                updateSMSTable();
+            }
+        }
+
+        // 선택된 학생들에게 SMS 발송
+        function sendSelectedSMS() {
+            const selectedStudents = smsData.filter(s => s.selected && !s.sent);
+            
+            if (selectedStudents.length === 0) {
+                alert('발송할 학생을 선택해주세요.');
+                return;
+            }
+            
+            if (confirm(`선택된 ${selectedStudents.length}명에게 문자를 발송하시겠습니까?`)) {
+                // 실제 SMS 발송 로직은 여기에 구현
+                selectedStudents.forEach(student => {
+                    student.sent = true;
+                    student.selected = false;
+                });
+                
+                updateSMSTable();
+                alert(`${selectedStudents.length}명에게 문자가 발송되었습니다.`);
+            }
+        }
+
+        // SMS 목록 초기화
+        function clearSMSList() {
+            if (confirm('문자발송 목록을 초기화하시겠습니까?')) {
+                smsData = [];
+                updateSMSTable();
+            }
+        }
+
+        // 문자발송 기록 저장/불러오기
+        function saveSMSRecords() {
+            localStorage.setItem('sms_records_all', JSON.stringify(allSMSRecords));
+        }
+
+        function loadSMSRecords() {
+            const savedData = localStorage.getItem('sms_records_all');
+            if (savedData) {
+                allSMSRecords = JSON.parse(savedData);
+            }
+        }
+
+        // 전역 변수로 현재 발송할 학생 정보 저장
+        let currentSendingStudent = null;
+        
+        // 웹훅으로 문자 발송 - 미리보기 표시
+        function sendWebhook(studentId, status, studentNumber) {
+            const student = smsData.find(s => s.id === studentId);
+            if (!student) {
+                alert('학생 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            if (student.sent) {
+                alert('이미 발송된 학생입니다.');
+                return;
+            }
+
+            // 현재 발송할 학생 정보 저장
+            currentSendingStudent = student;
+            
+            // 미리보기 모달 표시
+            showSMSPreview(student);
+        }
+        
+        // SMS 미리보기 표시
+        function showSMSPreview(student) {
+            const message = processTemplate(student);
+            
+            document.getElementById('previewRecipient').textContent = `${student.studentNumber}번 ${student.name} 보호자`;
+            document.getElementById('previewPhone').textContent = student.phone || '연락처 없음';
+            document.getElementById('previewSender').textContent = senderName || '발신자 미설정';
+            document.getElementById('previewMessage').textContent = message;
+            
+            document.getElementById('smsPreviewModal').style.display = 'block';
+        }
+        
+        // SMS 미리보기 닫기
+        function closeSMSPreview() {
+            document.getElementById('smsPreviewModal').style.display = 'none';
+            currentSendingStudent = null;
+        }
+        
+        // 실제 SMS 발송 확인
+        async function confirmSendSMS() {
+            if (!currentSendingStudent) {
+                alert('발송할 학생 정보가 없습니다.');
+                return;
+            }
+            
+            closeSMSPreview();
+            
+            // 실제 발송 처리
+            await performSMSSend(currentSendingStudent);
+        }
+        
+        // 실제 SMS 발송 처리
+        async function performSMSSend(student) {
+
+            try {
+                // 템플릿 처리된 메시지 생성
+                const message = processTemplate(student);
+                
+                // 솔라피 설정 확인
+                if (!solapiApiKey || !solapiSecretKey || !senderPhone) {
+                    alert('솔라피 API 설정이 필요합니다. ⚙️ 웹훅 설정에서 API 정보를 입력해주세요.');
+                    return;
+                }
+
+                // 솔라피 API 데이터 준비
+                const solapiData = {
+                    apiKey: solapiApiKey,
+                    secretKey: solapiSecretKey,
+                    from: senderPhone.replace(/-/g, ''), // 하이픈 제거
+                    to: student.phone.replace(/-/g, ''), // 하이픈 제거
+                    text: message,
+                    studentInfo: {
+                        studentNumber: student.studentNumber,
+                        name: student.name,
+                        date: student.date,
+                        status: student.status
+                    }
+                };
+
+                // 백엔드 서버로 요청 (CORS 우회)
+                // 실제 사용시에는 자신의 백엔드 서버 URL로 변경
+                const serverUrl = webhookUrl || 'https://your-backend-server.com/send-solapi-sms';
+                
+                const response = await fetch(serverUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(solapiData)
+                });
+
+                if (response.ok) {
+                    // 발송 성공 - 기록 저장
+                    student.sent = true;
+                    student.selected = false;
+                    
+                    // 발송 기록을 allSMSRecords에 저장
+                    allSMSRecords[student.uniqueKey] = {
+                        sent: true,
+                        sentTime: new Date().toISOString(),
+                        webhookResponse: 'success'
+                    };
+                    saveSMSRecords();
+                    
+                    updateSMSTable();
+                    alert(`${student.studentNumber}번 학생에게 문자가 발송되었습니다.`);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.error('웹훅 발송 실패:', error);
+                
+                // 개발/테스트용 - 실제로는 웹훅이 없어도 성공으로 처리
+                if (confirm('웹훅 서비스에 연결할 수 없습니다. 테스트 모드로 발송 처리하시겠습니까?')) {
+                    student.sent = true;
+                    student.selected = false;
+                    
+                    // 테스트 모드 발송 기록도 저장
+                    allSMSRecords[student.uniqueKey] = {
+                        sent: true,
+                        sentTime: new Date().toISOString(),
+                        webhookResponse: 'test_mode'
+                    };
+                    saveSMSRecords();
+                    
+                    updateSMSTable();
+                    alert(`${student.studentNumber}번 학생에게 문자가 발송되었습니다. (테스트 모드)`);
+                } else {
+                    alert('문자 발송에 실패했습니다: ' + error.message);
+                }
+            }
+        }
+
+        // 웹훅 URL 설정 (실제 사용시 수정 필요)
+        let webhookUrl = 'https://your-webhook-service.com/send-sms';
+
+        // 솔라피 API 설정
+        let solapiApiKey = '';
+        let solapiSecretKey = '';
+        let senderPhone = '';
+        
+        // 솔라피 API 설정 함수
+        function setWebhookUrl() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+                z-index: 1000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; width: 400px;">
+                    <h3>📱 솔라피 API 설정</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label>API Key:</label><br>
+                        <input type="text" id="apiKey" value="${solapiApiKey}" style="width: 100%; padding: 5px; margin-top: 5px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label>Secret Key:</label><br>
+                        <input type="password" id="secretKey" value="${solapiSecretKey}" style="width: 100%; padding: 5px; margin-top: 5px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label>발신번호:</label><br>
+                        <input type="text" id="senderPhone" value="${senderPhone}" placeholder="010-0000-0000" style="width: 100%; padding: 5px; margin-top: 5px;">
+                    </div>
+                    <div style="text-align: center;">
+                        <button onclick="saveSolapiSettings()" style="background: #007bff; color: white; padding: 8px 15px; border: none; border-radius: 4px; margin-right: 10px;">저장</button>
+                        <button onclick="closeSolapiModal()" style="background: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 4px;">취소</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentSolapiModal = modal;
+        }
+        
+        function saveSolapiSettings() {
+            solapiApiKey = document.getElementById('apiKey').value.trim();
+            solapiSecretKey = document.getElementById('secretKey').value.trim();
+            senderPhone = document.getElementById('senderPhone').value.trim();
+            
+            if (!solapiApiKey || !solapiSecretKey || !senderPhone) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+            
+            localStorage.setItem('solapi_api_key', solapiApiKey);
+            localStorage.setItem('solapi_secret_key', solapiSecretKey);
+            localStorage.setItem('solapi_sender_phone', senderPhone);
+            
+            alert('솔라피 API 설정이 저장되었습니다.');
+            closeSolapiModal();
+        }
+        
+        function closeSolapiModal() {
+            if (window.currentSolapiModal) {
+                document.body.removeChild(window.currentSolapiModal);
+                window.currentSolapiModal = null;
+            }
+        }
+
+        // 솔라피 설정 불러오기
+        function loadWebhookUrl() {
+            const savedApiKey = localStorage.getItem('solapi_api_key');
+            const savedSecretKey = localStorage.getItem('solapi_secret_key');
+            const savedSenderPhone = localStorage.getItem('solapi_sender_phone');
+            
+            if (savedApiKey) solapiApiKey = savedApiKey;
+            if (savedSecretKey) solapiSecretKey = savedSecretKey;
+            if (savedSenderPhone) senderPhone = savedSenderPhone;
+        }
+
+        // 문자 템플릿 관련 변수들
+        let smsTemplates = {
+            absent: `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결석하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+            late: `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 지각하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+            'early-leave': `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 조퇴하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 문의해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+            'absent-early': `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결과하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`
+        };
+
+        let senderName = '3-2반 담임';
+        let currentTemplateType = 'absent';
+
+        // 템플릿 탭 전환
+        function switchTemplateTab(type) {
+            // 모든 탭 비활성화
+            document.querySelectorAll('.template-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.template-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 선택된 탭 활성화
+            document.getElementById('tab-' + type).classList.add('active');
+            document.getElementById('template-' + type).classList.add('active');
+            
+            currentTemplateType = type;
+        }
+
+        // 템플릿 설정 모달 열기
+        function setSMSTemplate() {
+            loadTemplate();
+            switchTemplateTab('absent');
+            document.getElementById('templateModal').style.display = 'block';
+        }
+
+        // 템플릿 모달 닫기
+        function closeTemplateModal() {
+            document.getElementById('templateModal').style.display = 'none';
+        }
+
+        // 템플릿 저장
+        function saveTemplate() {
+            smsTemplates.absent = document.getElementById('templateAbsent').value;
+            smsTemplates.late = document.getElementById('templateLate').value;
+            smsTemplates['early-leave'] = document.getElementById('templateEarly').value;
+            smsTemplates['absent-early'] = document.getElementById('templateAbsentEarly').value;
+            senderName = document.getElementById('senderName').value;
+            
+            localStorage.setItem('sms_templates', JSON.stringify(smsTemplates));
+            localStorage.setItem('sms_sender_name', senderName);
+            
+            alert('템플릿이 저장되었습니다.');
+            closeTemplateModal();
+        }
+
+        // 템플릿 불러오기
+        function loadTemplate() {
+            const savedTemplates = localStorage.getItem('sms_templates');
+            const savedSender = localStorage.getItem('sms_sender_name');
+            
+            if (savedTemplates) {
+                smsTemplates = JSON.parse(savedTemplates);
+            }
+            if (savedSender) {
+                senderName = savedSender;
+            }
+            
+            document.getElementById('templateAbsent').value = smsTemplates.absent;
+            document.getElementById('templateLate').value = smsTemplates.late;
+            document.getElementById('templateEarly').value = smsTemplates['early-leave'];
+            document.getElementById('templateAbsentEarly').value = smsTemplates['absent-early'] || '';
+            document.getElementById('senderName').value = senderName;
+        }
+
+        // 기본값 복원
+        function resetTemplate() {
+            if (confirm('모든 템플릿을 기본값으로 복원하시겠습니까?')) {
+                smsTemplates = {
+                    absent: `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결석하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+                    late: `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 지각하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+                    'early-leave': `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 조퇴하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 문의해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`,
+
+                    'absent-early': `[자동발송]
+안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결과하였습니다. 
+——————
+-날짜: {{날짜}}
+-교시: {{시작}}교시~{{끝}}교시까지 
+-종류: {{종류}}
+———————
+궁금한 사항이 있으시면 연락해 주세요.  
+감사합니다.
+-{{발신자명}} 드림
+
+*출결신고서 부탁드립니다.(미인정 제외)`
+                };
+                senderName = '3-2반 담임';
+                
+                document.getElementById('templateAbsent').value = smsTemplates.absent;
+                document.getElementById('templateLate').value = smsTemplates.late;
+                document.getElementById('templateEarly').value = smsTemplates['early-leave'];
+                document.getElementById('templateAbsentEarly').value = smsTemplates['absent-early'];
+                document.getElementById('senderName').value = senderName;
+            }
+        }
+
+        // 템플릿 변수 치환
+        function processTemplate(student) {
+            // 출결 상태에 따른 적절한 템플릿 선택
+            const templateType = student.originalStatus;
+            let message = smsTemplates[templateType] || smsTemplates.absent;
+            
+            // 시작/종료 교시 계산
+            let startPeriod = '';
+            let endPeriod = '';
+            
+            if (student.period) {
+                // period가 객체인 경우 처리 (범위 선택)
+                let periodText = '';
+                if (typeof student.period === 'object' && student.period.start !== undefined) {
+                    // 범위 선택인 경우
+                    startPeriod = student.period.start === 0 ? '0' : student.period.start.toString();
+                    endPeriod = student.period.end === 0 ? '0' : student.period.end.toString();
+                } else if (typeof student.period === 'string') {
+                    // 문자열인 경우
+                    periodText = student.period;
+                    if (student.originalStatus === 'absent') {
+                        // 결석: 1교시부터 해당 교시까지
+                        startPeriod = '1';
+                        endPeriod = periodText.replace('교시', '').replace('조례', '0');
+                    } else if (student.originalStatus === 'late') {
+                        // 지각: 해당 교시부터 마지막 교시까지
+                        startPeriod = periodText.replace('교시', '').replace('조례', '0');
+                        endPeriod = '7'; // 보통 7교시까지
+                    } else if (student.originalStatus === 'early-leave') {
+                        // 조퇴: 해당 교시부터 마지막 교시까지
+                        startPeriod = periodText.replace('교시', '').replace('조례', '0');
+                        endPeriod = '7';
+                    } else if (student.originalStatus === 'absent-early') {
+                        // 결과: 1교시부터 해당 교시까지
+                        startPeriod = '1';
+                        endPeriod = periodText.replace('교시', '').replace('조례', '0');
+                    }
+                }
+            }
+            
+            // 변수 치환
+            message = message.replace(/\{\{이름\}\}/g, student.name.replace('학생', ''));
+            message = message.replace(/\{\{날짜\}\}/g, student.date);
+            message = message.replace(/\{\{종류\}\}/g, student.status);
+            message = message.replace(/\{\{발신자명\}\}/g, senderName);
+            
+            // 결석의 경우 교시 정보 제거
+            if (student.originalStatus === 'absent') {
+                message = message.replace(/\{\{시작\}\}교시~\{\{끝\}\}교시까지\s*/g, '');
+                message = message.replace(/-교시:\s*\{\{시작\}\}교시~\{\{끝\}\}교시까지\s*/g, '');
+            } else {
+                message = message.replace(/\{\{시작\}\}/g, startPeriod === '0' ? '조례' : startPeriod);
+                message = message.replace(/\{\{끝\}\}/g, endPeriod === '0' ? '조례' : endPeriod);
+            }
+            
+            return message;
+        }
+
+        // 학생 데이터 관리
+        let studentData = {};
+        
+        // 학생명단 업로드 모달 열기
+        function uploadStudentData() {
+            document.getElementById('studentUploadModal').style.display = 'block';
+        }
+        
+        // 학생명단 업로드 모달 닫기
+        function closeStudentUploadModal() {
+            document.getElementById('studentUploadModal').style.display = 'none';
+            document.getElementById('uploadResult').style.display = 'none';
+        }
+        
+        // 학생명단 템플릿 다운로드 (XLSX)
+        function downloadStudentTemplate() {
+            // 간단한 HTML 테이블을 XLSX로 다운로드
+            const data = [
+                ['번호', '이름', '전화번호'],
+                [1, '홍길동', '010-1234-5678'],
+                [2, '김철수', '010-2345-6789'],
+                [3, '이영희', '010-3456-7890']
+            ];
+            
+            // 엑셀용 HTML 생성
+            let html = '<table>';
+            data.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', '학생명단_양식.xls');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+        
+        // 학생명단 파일 처리
+        function processStudentFile() {
+            const fileInput = document.getElementById('studentFileInput');
+            const file = fileInput.files[0];
+            const resultDiv = document.getElementById('uploadResult');
+            
+            if (!file) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+            
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                alert('CSV, XLS 또는 XLSX 파일만 업로드 가능합니다.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = [];
+                    
+                    if (fileName.endsWith('.csv')) {
+                        // CSV 파일 처리
+                        let csv = e.target.result;
+                        
+                        // UTF-8 BOM 제거
+                        if (csv.charCodeAt(0) === 0xFEFF) {
+                            csv = csv.substr(1);
+                        }
+                        const lines = csv.split('\n');
+                        
+                        // 헤더 건너뛰기
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (line === '') continue;
+                            
+                            const parts = line.split(',');
+                            if (parts.length >= 3) {
+                                data.push([
+                                    parts[0].trim(),
+                                    parts[1].trim(),
+                                    parts[2].trim()
+                                ]);
+                            }
+                        }
+                    } else {
+                        // XLSX 파일 처리
+                        const workbook = XLSX.read(e.target.result, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        // 헤더 건너뛰기
+                        data = jsonData.slice(1);
+                    }
+                    
+                    // 데이터 처리
+                    let successCount = 0;
+                    let errorCount = 0;
+                    let errors = [];
+                    
+                    data.forEach((row, index) => {
+                        if (row.length >= 3) {
+                            const studentNumber = String(row[0]).trim();
+                            const name = String(row[1]).trim();
+                            const phone = String(row[2]).trim();
+                            
+                            if (studentNumber && name) {
+                                studentData[studentNumber] = {
+                                    name: name,
+                                    phone: phone
+                                };
+                                successCount++;
+                            } else {
+                                errors.push(`${index + 2}행: 번호 또는 이름이 누락됨`);
+                                errorCount++;
+                            }
+                        } else if (row.some(cell => cell)) { // 빈 행이 아닌 경우만
+                            errors.push(`${index + 2}행: 형식이 올바르지 않음`);
+                            errorCount++;
+                        }
+                    });
+                    
+                    // 결과 표시
+                    let resultHtml = `<h4>업로드 결과</h4>`;
+                    resultHtml += `<p>✅ 성공: ${successCount}명</p>`;
+                    if (errorCount > 0) {
+                        resultHtml += `<p>❌ 오류: ${errorCount}건</p>`;
+                        resultHtml += `<ul>`;
+                        errors.forEach(error => {
+                            resultHtml += `<li>${error}</li>`;
+                        });
+                        resultHtml += `</ul>`;
+                    }
+                    
+                    resultDiv.innerHTML = resultHtml;
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.backgroundColor = successCount > 0 ? '#d4edda' : '#f8d7da';
+                    resultDiv.style.color = successCount > 0 ? '#155724' : '#721c24';
+                    
+                    // 학생 데이터 저장
+                    saveStudentData();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<h4>오류</h4><p>파일을 읽는 중 오류가 발생했습니다: ${error.message}</p>`;
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.backgroundColor = '#f8d7da';
+                    resultDiv.style.color = '#721c24';
+                }
+            };
+            
+            // 파일 타입에 따라 다르게 읽기
+            if (fileName.endsWith('.csv')) {
+                reader.readAsText(file, 'utf-8');
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        }
+        
+        // 학생 데이터 저장
+        function saveStudentData() {
+            localStorage.setItem('student_data', JSON.stringify(studentData));
+        }
+        
+        // 학생 데이터 불러오기
+        function loadStudentData() {
+            const saved = localStorage.getItem('student_data');
+            if (saved) {
+                studentData = JSON.parse(saved);
+            }
+        }
+        
+        // 학생 정보 가져오기
+        function getStudentInfo(studentNumber) {
+            const info = studentData[studentNumber];
+            if (info) {
+                return {
+                    name: info.name,
+                    phone: info.phone
+                };
+            }
+            return {
+                name: `학생${studentNumber}`,
+                phone: '010-0000-0000'
+            };
+        }
+
+        // 페이지 로드시 초기화
+        window.onload = function() {
+            // 작업 날짜 초기화 (오늘이 주말이면 평일로 조정)
+            const today = new Date();
+            if (today.getDay() === 0) { // 일요일
+                workingDate.setDate(today.getDate() + 1); // 월요일로
+            } else if (today.getDay() === 6) { // 토요일
+                workingDate.setDate(today.getDate() + 2); // 월요일로
+            }
+            
+            // 모든 날짜 변수를 동기화
+            currentDate = new Date(workingDate);
+            selectedDate = new Date(workingDate);
+            
+            displayWorkingDate();
+            createStudentCards();
+            loadFromLocalStorage();
+            loadWorkingDateData();
+            createCalendar();
+            
+            // 웹훅 URL 불러오기
+            loadWebhookUrl();
+            
+            // 문자발송 기록 불러오기
+            loadSMSRecords();
+            
+            // 학생 데이터 불러오기
+            loadStudentData();
+            
+            // 템플릿 불러오기
+            const savedTemplate = localStorage.getItem('sms_template');
+            const savedSender = localStorage.getItem('sms_sender_name');
+            if (savedTemplate) smsTemplate = savedTemplate;
+            if (savedSender) senderName = savedSender;
+            
+            // 기본으로 출결관리 탭 활성화
+            switchTab('attendance');
+        };
+        
+        // 모달 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const historyModal = document.getElementById('historyModal');
+            const periodModal = document.getElementById('periodModal');
+            const attendanceModal = document.getElementById('attendanceModal'); // v2 추가
+            const monthSelectorModal = document.getElementById('monthSelectorModal'); // 월 선택 모달 추가
+            const templateModal = document.getElementById('templateModal'); // 템플릿 모달 추가
+            
+            if (event.target === historyModal) {
+                historyModal.style.display = 'none';
+            }
+            
+            if (event.target === periodModal) {
+                closePeriodModal();
+            }
+            
+            if (event.target === attendanceModal) {
+                closeAttendanceModal();
+            }
+            
+            if (event.target === monthSelectorModal) {
+                closeMonthSelector();
+            }
+            
+            if (event.target === templateModal) {
+                closeTemplateModal();
+            }
+        };
+    </script>
+</body>
+</html>
