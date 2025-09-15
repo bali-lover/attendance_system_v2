@@ -3200,10 +3200,15 @@
             message = message.replace(/\{\{종류\}\}/g, student.status);
             message = message.replace(/\{\{발신자명\}\}/g, senderName);
             
-            // 결석의 경우 교시 정보 제거
+            // 결석의 경우 교시 정보 완전 제거
             if (student.originalStatus === 'absent') {
-                message = message.replace(/\{\{시작\}\}교시~\{\{끝\}\}교시까지\s*/g, '');
                 message = message.replace(/-교시:\s*\{\{시작\}\}교시~\{\{끝\}\}교시까지\s*/g, '');
+                message = message.replace(/-교시:\s*\{\{시작\}\}교시~\{\{끝\}\}교시\s*/g, '');
+                message = message.replace(/-교시:\s*\n/g, '');
+                message = message.replace(/-교시:\s*/g, '');
+                // 남은 템플릿 변수도 제거
+                message = message.replace(/\{\{시작\}\}/g, '');
+                message = message.replace(/\{\{끝\}\}/g, '');
             } else {
                 message = message.replace(/\{\{시작\}\}/g, startPeriod === '0' ? '조례' : startPeriod);
                 message = message.replace(/\{\{끝\}\}/g, endPeriod === '0' ? '조례' : endPeriod);
