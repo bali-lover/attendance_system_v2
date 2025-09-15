@@ -1601,8 +1601,30 @@
                                 }
                             }
                         } else if (record.period && (record.status === 'late' || record.status === 'early-leave' || record.status === 'absent-early')) {
-                            // 기존 단일 교시 방식
-                            periodText = ` (${record.period}교시)`;
+                            // 기존 단일 교시 방식 또는 객체 처리
+                            if (typeof record.period === 'object') {
+                                // period가 객체인 경우 안전하게 처리
+                                const periodObj = record.period;
+                                if (periodObj.start !== undefined && periodObj.end !== undefined) {
+                                    const startName = periodObj.start === 0 ? '조례' : periodObj.start;
+                                    const endName = periodObj.end === 0 ? '조례' : periodObj.end;
+                                    
+                                    if (periodObj.start === periodObj.end) {
+                                        periodText = ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                                    } else {
+                                        if (startName !== '조례' && endName !== '조례') {
+                                            periodText = ` (${startName}~${endName}교시)`;
+                                        } else {
+                                            periodText = ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                        }
+                                    }
+                                } else {
+                                    periodText = '';
+                                }
+                            } else {
+                                // 문자열인 경우
+                                periodText = ` (${record.period}교시)`;
+                            }
                         }
                         
                         displayText += periodText;
