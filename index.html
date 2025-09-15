@@ -2222,8 +2222,27 @@
                         statusText = '인정';
                     }
                     
-                    if (record.period && (record.status === 'late' || record.status === 'early-leave')) {
-                        statusText += ` (${record.period}교시)`;
+                    if (record.period && (record.status === 'late' || record.status === 'early-leave' || record.status === 'absent-early')) {
+                        // period가 객체인지 문자열인지 확인
+                        if (typeof record.period === 'object') {
+                            const periodObj = record.period;
+                            if (periodObj.start !== undefined && periodObj.end !== undefined) {
+                                const startName = periodObj.start === 0 ? '조례' : periodObj.start;
+                                const endName = periodObj.end === 0 ? '조례' : periodObj.end;
+                                
+                                if (periodObj.start === periodObj.end) {
+                                    statusText += ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                                } else {
+                                    if (startName !== '조례' && endName !== '조례') {
+                                        statusText += ` (${startName}~${endName}교시)`;
+                                    } else {
+                                        statusText += ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                    }
+                                }
+                            }
+                        } else {
+                            statusText += ` (${record.period}교시)`;
+                        }
                     }
                     
                     historyHTML += `
