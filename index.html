@@ -2027,40 +2027,87 @@
         // 전체 기록 CSV 내보내기
         function exportAllToCSV() {
             let allCsvRecords = [];
-            
+
             Object.keys(allRecords).forEach(date => {
                 Object.keys(allRecords[date]).forEach(studentNumber => {
                     const record = allRecords[date][studentNumber];
-                    allCsvRecords.push(`${date},${studentNumber},${getStatusKorean(record.status)},${record.time}`);
+
+                    // 출결 상태 (결석, 지각, 조퇴, 결과)
+                    let statusText = getStatusKorean(record.status);
+
+                    // 교시 정보 추가
+                    if (record.period && (record.status === 'late' || record.status === 'early-leave' || record.status === 'absent-early')) {
+                        if (typeof record.period === 'object') {
+                            const periodObj = record.period;
+                            if (periodObj.start !== undefined && periodObj.end !== undefined) {
+                                const startName = periodObj.start === 0 ? '조례' : periodObj.start;
+                                const endName = periodObj.end === 0 ? '조례' : periodObj.end;
+
+                                if (periodObj.start === periodObj.end) {
+                                    statusText += ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                                } else {
+                                    if (startName !== '조례' && endName !== '조례') {
+                                        statusText += ` (${startName}~${endName}교시)`;
+                                    } else {
+                                        statusText += ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                    }
+                                }
+                            }
+                        } else {
+                            statusText += ` (${record.period}교시)`;
+                        }
+                    }
+
+                    // 인정/질병 유형 정보 추가
+                    const verificationType = record.verificationType || 'verified';
+                    let verificationText = '';
+                    if (verificationType === 'medical') {
+                        verificationText = '질병';
+                    } else if (verificationType === 'unverified') {
+                        verificationText = '미인정';
+                    } else {
+                        verificationText = '인정';
+                    }
+
+                    allCsvRecords.push(`${date},${studentNumber},${statusText},${verificationText},${record.time}`);
                 });
             });
-            
+
             if (allCsvRecords.length === 0) {
                 alert('내보낼 누적 기록이 없습니다.');
                 return;
             }
-            
+
             const totalDays = Object.keys(allRecords).length;
-            
+
             if (confirm(`전체 출결 기록을 CSV 파일로 다운로드하시겠습니까?\n\n총 ${totalDays}일간 ${allCsvRecords.length}건의 기록이 있습니다.`)) {
-                const csvContent = 'data:text/csv;charset=utf-8,' 
-                    + '날짜,학생번호,상태,시간\n'
+                const csvContent = 'data:text/csv;charset=utf-8,'
+                    + '날짜,학생번호,상태,유형,시간\n'
                     + allCsvRecords.join('\n');
-                
+
                 const today = new Date().toLocaleDateString('ko-KR');
                 downloadCSV(csvContent, `전체출결기록_${today}.csv`);
             }
         }
         
-        // CSV 다운로드 헬퍼 함수
+        // CSV 다운로드 헬퍼 함수 (엑셀 호환성 개선)
         function downloadCSV(csvContent, filename) {
-            const encodedUri = encodeURI(csvContent);
+            // BOM 추가로 엑셀에서 한글 깨짐 방지
+            const BOM = '\uFEFF';
+            const csvData = csvContent.replace('data:text/csv;charset=utf-8,', '');
+            const blob = new Blob([BOM + csvData], { type: 'text/csv;charset=utf-8;' });
+
             const link = document.createElement('a');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
         }
         
         // 누적 기록 보기
@@ -2211,17 +2258,11 @@
                 Object.keys(dayRecords).forEach(studentNumber => {
                     const record = dayRecords[studentNumber];
                     let statusText = getStatusKorean(record.status);
+
+                    // 출결 상태 정보 유지 (결석, 지각, 조퇴, 결과)
+                    let detailedStatus = statusText;
                     
-                    // v2: 간결한 유형 표시
-                    const verificationType = record.verificationType || 'verified';
-                    if (verificationType === 'medical') {
-                        statusText = '질병';
-                    } else if (verificationType === 'unverified') {
-                        statusText = '미인정';
-                    } else {
-                        statusText = '인정';
-                    }
-                    
+                    // 교시 정보 추가
                     if (record.period && (record.status === 'late' || record.status === 'early-leave' || record.status === 'absent-early')) {
                         // period가 객체인지 문자열인지 확인
                         if (typeof record.period === 'object') {
@@ -2229,25 +2270,36 @@
                             if (periodObj.start !== undefined && periodObj.end !== undefined) {
                                 const startName = periodObj.start === 0 ? '조례' : periodObj.start;
                                 const endName = periodObj.end === 0 ? '조례' : periodObj.end;
-                                
+
                                 if (periodObj.start === periodObj.end) {
-                                    statusText += ` (${startName === '조례' ? '조례' : startName + '교시'})`;
+                                    detailedStatus += ` (${startName === '조례' ? '조례' : startName + '교시'})`;
                                 } else {
                                     if (startName !== '조례' && endName !== '조례') {
-                                        statusText += ` (${startName}~${endName}교시)`;
+                                        detailedStatus += ` (${startName}~${endName}교시)`;
                                     } else {
-                                        statusText += ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
+                                        detailedStatus += ` (${startName === '조례' ? '조례' : startName + '교시'}~${endName === '조례' ? '조례' : endName + '교시'})`;
                                     }
                                 }
                             }
                         } else {
-                            statusText += ` (${record.period}교시)`;
+                            detailedStatus += ` (${record.period}교시)`;
                         }
                     }
-                    
+
+                    // 인정/질병 유형 표시 추가
+                    const verificationType = record.verificationType || 'verified';
+                    let verificationText = '';
+                    if (verificationType === 'medical') {
+                        verificationText = ' [질병]';
+                    } else if (verificationType === 'unverified') {
+                        verificationText = ' [미인정]';
+                    } else {
+                        verificationText = ' [인정]';
+                    }
+
                     historyHTML += `
                         <div style="display: flex; justify-content: space-between; padding: 8px; background-color: white; border-radius: 4px;">
-                            <span><strong>${studentNumber}번</strong> - ${statusText}</span>
+                            <span><strong>${studentNumber}번</strong> - ${detailedStatus}${verificationText}</span>
                             <span>${record.time}</span>
                         </div>
                     `;
