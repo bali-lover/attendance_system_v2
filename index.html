@@ -3054,61 +3054,64 @@
 
         // 문자 템플릿 관련 변수들
         let smsTemplates = {
-            absent: `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 결석하였습니다. 
+            absent: `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결석하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"결석"신고서`,
 
-            late: `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 지각하였습니다. 
+            late: `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 지각하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
+-교시: {{시작}}교시~{{끝}}교시까지 (8:40~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"지각"신고서`,
 
-            'early-leave': `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 조퇴하였습니다. 
+            'early-leave': `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 조퇴하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시
+-교시: {{시작}}교시~{{끝}}교시까지 ({{시작시간}}~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 문의해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"조퇴"신고서`,
 
-            'absent-early': `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 결과하였습니다. 
+            'absent-early': `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결과하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
+-교시: {{시작}}교시~{{끝}}교시까지 ({{시작시간}}~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"결과"신고서`
         };
 
         let senderName = '3-2반 담임';
@@ -3181,61 +3184,64 @@
         function resetTemplate() {
             if (confirm('모든 템플릿을 기본값으로 복원하시겠습니까?')) {
                 smsTemplates = {
-                    absent: `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 결석하였습니다. 
+                    absent: `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결석하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"결석"신고서`,
 
-                    late: `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 지각하였습니다. 
+                    late: `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 지각하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
+-교시: {{시작}}교시~{{끝}}교시까지 (8:40~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"지각"신고서`,
 
-                    'early-leave': `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 조퇴하였습니다. 
+                    'early-leave': `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 조퇴하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시
+-교시: {{시작}}교시~{{끝}}교시까지 ({{시작시간}}~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 문의해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`,
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"조퇴"신고서`,
 
-                    'absent-early': `[자동발송]
-안녕하세요, {{이름}} 보호자님.
-{{이름}} 학생이 아래와 같이 결과하였습니다. 
+                    'absent-early': `안녕하세요, {{이름}} 보호자님.
+{{이름}} 학생이 아래와 같이 결과하였습니다.
 ——————
 -날짜: {{날짜}}
--교시: {{시작}}교시~{{끝}}교시까지 
+-교시: {{시작}}교시~{{끝}}교시까지 ({{시작시간}}~{{끝시간}})
 -종류: {{종류}}
 ———————
-궁금한 사항이 있으시면 연락해 주세요.  
-감사합니다.
+궁금한 사항이 있으시면 연락해 주세요.
 -{{발신자명}} 드림
 
-*출결신고서 부탁드립니다.(미인정 제외)`
+*출결신고서 부탁드립니다. (미인정제외)
+-나이스 학부모서비스 어플을 통해 제출하면 간편합니다.
+(https://parents.neis.go.kr/csp-prnt/#/prn-main/main)
+-메뉴>자녀지원>교육활동신청서>"결과"신고서`
                 };
                 senderName = '3-2반 담임';
                 
@@ -3247,16 +3253,28 @@
             }
         }
 
+        // 교시별 시간표
+        const periodTimes = {
+            '0': { start: '08:30', end: '08:50' },  // 조례
+            '1': { start: '09:10', end: '09:55' },
+            '2': { start: '10:05', end: '10:50' },
+            '3': { start: '11:00', end: '11:45' },
+            '4': { start: '11:45', end: '12:40' },
+            '5': { start: '13:30', end: '14:15' },
+            '6': { start: '14:25', end: '15:10' },
+            '7': { start: '15:20', end: '16:05' }
+        };
+
         // 템플릿 변수 치환
         function processTemplate(student) {
             // 출결 상태에 따른 적절한 템플릿 선택
             const templateType = student.originalStatus;
             let message = smsTemplates[templateType] || smsTemplates.absent;
-            
+
             // 시작/종료 교시 계산
             let startPeriod = '';
             let endPeriod = '';
-            
+
             if (student.period) {
                 // period가 객체인 경우 처리 (범위 선택)
                 let periodText = '';
@@ -3272,9 +3290,9 @@
                         startPeriod = '1';
                         endPeriod = periodText.replace('교시', '').replace('조례', '0');
                     } else if (student.originalStatus === 'late') {
-                        // 지각: 해당 교시부터 마지막 교시까지
-                        startPeriod = periodText.replace('교시', '').replace('조례', '0');
-                        endPeriod = '7'; // 보통 7교시까지
+                        // 지각: 조례(0교시)부터 해당 교시까지
+                        startPeriod = '0';
+                        endPeriod = periodText.replace('교시', '').replace('조례', '0');
                     } else if (student.originalStatus === 'early-leave') {
                         // 조퇴: 해당 교시부터 마지막 교시까지
                         startPeriod = periodText.replace('교시', '').replace('조례', '0');
@@ -3286,13 +3304,30 @@
                     }
                 }
             }
-            
+
+            // 시간 계산
+            let startTime = '';
+            let endTime = '';
+
+            if (student.originalStatus === 'late') {
+                // 지각: 8:40 ~ 끝교시 끝시간
+                endTime = periodTimes[endPeriod]?.end || '';
+            } else if (student.originalStatus === 'early-leave') {
+                // 조퇴: 시작교시 시작시간 ~ 끝교시 끝시간
+                startTime = periodTimes[startPeriod]?.start || '';
+                endTime = periodTimes[endPeriod]?.end || '';
+            } else if (student.originalStatus === 'absent-early') {
+                // 결과: 시작교시의 시작시간 ~ 끝교시의 끝시간
+                startTime = periodTimes[startPeriod]?.start || '';
+                endTime = periodTimes[endPeriod]?.end || '';
+            }
+
             // 변수 치환
             message = message.replace(/\{\{이름\}\}/g, student.name.replace('학생', ''));
             message = message.replace(/\{\{날짜\}\}/g, student.date);
             message = message.replace(/\{\{종류\}\}/g, student.status);
             message = message.replace(/\{\{발신자명\}\}/g, senderName);
-            
+
             // 결석의 경우 교시 정보 완전 제거
             if (student.originalStatus === 'absent') {
                 message = message.replace(/-교시:\s*\{\{시작\}\}교시~\{\{끝\}\}교시까지\s*/g, '');
@@ -3302,11 +3337,15 @@
                 // 남은 템플릿 변수도 제거
                 message = message.replace(/\{\{시작\}\}/g, '');
                 message = message.replace(/\{\{끝\}\}/g, '');
+                message = message.replace(/\{\{시작시간\}\}/g, '');
+                message = message.replace(/\{\{끝시간\}\}/g, '');
             } else {
                 message = message.replace(/\{\{시작\}\}/g, startPeriod === '0' ? '조례' : startPeriod);
                 message = message.replace(/\{\{끝\}\}/g, endPeriod === '0' ? '조례' : endPeriod);
+                message = message.replace(/\{\{시작시간\}\}/g, startTime);
+                message = message.replace(/\{\{끝시간\}\}/g, endTime);
             }
-            
+
             return message;
         }
 
